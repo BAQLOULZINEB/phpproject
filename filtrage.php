@@ -1,10 +1,8 @@
 <?php
-
 $servername = "localhost";
 $username = "root";
 $password = "";
 $dbname = "projects"; 
-
 
 function findProductImage($productName) {
     $imageDir = 'images/prod_images/';
