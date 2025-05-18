@@ -3,7 +3,7 @@ $servername = "localhost";
 $username = "root";
 $password = "";
 $dbname = "projects"; 
-
+//FONCTION pour donner a chaque produit son image 
 function findProductImage($productName) {
     $imageDir = 'images/prod_images/';
     $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
