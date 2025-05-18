@@ -1,11 +1,11 @@
 <?php
-// Database connection
+
 $servername = "localhost";
 $username = "root";
 $password = "";
-$dbname = "projects"; // Replace with your database name
+$dbname = "projects"; 
 
-// Function to find product image with any extension
+
 function findProductImage($productName) {
     $imageDir = 'images/prod_images/';
     $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
@@ -46,22 +46,22 @@ $search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : 
 // Base query
 $sql = "SELECT * FROM products WHERE 1=1";
 
-// Add category filter if specified
+//  category filter 
 if (!empty($category) && $category !== 'all') {
     $sql .= " AND category = '" . $conn->real_escape_string($category) . "'";
 }
-// Add subcategory filter if specified
+// subcategory filter 
 if (!empty($subcategory) && $subcategory !== 'all') {
     $sql .= " AND subcategory = '" . $conn->real_escape_string($subcategory) . "'";
 }
-// Add brand filter if specified
+// brand filter 
 if (!empty($brand) && $brand !== 'all') {
     $sql .= " AND brand = '" . $conn->real_escape_string($brand) . "'";
 }
-// Add price range filter
+//  range filter
 $sql .= " AND price BETWEEN " . $min_price . " AND " . $max_price;
 
-// Add search filter if specified
+
 if (!empty($search)) {
     $sql .= " AND (name LIKE '%$search%' OR description LIKE '%$search%')";
 }
@@ -73,7 +73,7 @@ if ($sort_price === 'asc') {
     $sql .= " ORDER BY price DESC";
 }
 
-// Execute query
+//  query
 $result = $conn->query($sql);
 ?>
 
