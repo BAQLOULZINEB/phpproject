@@ -1,0 +1,9 @@
+MYSQL_HOST = "localhost"
+MYSQL_DB = "projects"
+MYSQL_USER = "root"
+MYSQL_PASSWORD = ""
+MINIO_ENDPOINT = "localhost:9000"
+MINIO_ACCESS_KEY = "minioadmin"
+MINIO_SECRET_KEY = "minioadmin"
+MINIO_BUCKET = "ecommerce-data"
+API_PORT = 8000

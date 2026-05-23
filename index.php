@@ -1,6 +1,14 @@
 <?php 
-  session_start();
-  ?> <!DOCTYPE html>
+session_start();
+if (!isset($_SESSION['panier'])) {
+    $_SESSION['panier'] = [];
+}
+$cartCount = 0;
+foreach ($_SESSION['panier'] as $item) {
+    $cartCount += isset($item['quantity']) ? intval($item['quantity']) : 0;
+}
+?>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <title>Glow - ECommerce Beauty Store </title>
@@ -326,9 +334,10 @@
               </ul>
 
               <div class="cart text-end d-none d-lg-block ms-4">
-                <button class="border-0 bg-transparent d-flex flex-column gap-2 lh-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
+                <button class="border-0 bg-transparent d-flex align-items-center gap-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
+                  <svg width="24" height="24"><use xlink:href="#cart"></use></svg>
                   <span class="fs-6 text-muted">Your Cart</span>
-                  <span class="cart-total fs-5 fw-bold">check here</span>
+                  <span id="cart-count-badge" class="badge bg-danger rounded-pill"><?php echo $cartCount; ?></span>
                 </button>
               </div>
             </div>
@@ -505,7 +514,7 @@
                   <img src="images/icon-sunblock.png" alt="Category Thumbnail">
                   <h3 class="category-title">Sunblock</h3>
                 </a>
-                <a href="filtrage.php?category=Skin Care&subcategory=Moisturiser" class="nav-link category-item swiper-slide">
+                <a href="filtrage.php?category=Skin Care" class="nav-link category-item swiper-slide">
                   <img src="images/icon-cream.png" alt="Category Thumbnail">
                   <h3 class="category-title">Cream</h3>
                 </a>
@@ -517,7 +526,7 @@
                   <img src="images/icon-lipstick.png" alt="Category Thumbnail">
                   <h3 class="category-title">Lipstick</h3>
                 </a>
-                <a href="filtrage.php?category=Skin Care&subcategory=Organic P" class="nav-link category-item swiper-slide">
+                <a href="filtrage.php?category=Skin Care&subcategory=Organic Products" class="nav-link category-item swiper-slide">
                   <img src="images/icon-organic.png" alt="Category Thumbnail">
                   <h3 class="category-title">Organic</h3>
                 </a>
@@ -1218,7 +1227,7 @@
               <h2 class="section-title">Best selling products</h2>
 
               <div class="d-flex align-items-center">
-                <a href="#" class="btn-link text-decoration-none">View All Categories →</a>
+                <a href="#" class="btn-link text-decoration-none">View All  →</a>
                 <div class="swiper-buttons">
                   <button class="swiper-prev products-carousel-prev btn btn-primary">❮</button>
                   <button class="swiper-next products-carousel-next btn btn-primary">❯</button>
@@ -1403,24 +1412,19 @@
                 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Dictumst amet, metus, sit massa posuere maecenas. At tellus ut nunc amet vel egestas.</p>
               </div>
               <div class="col-md-6 p-5">
-                <form>
+                <form method="POST" action="connexion.php">
                   <div class="mb-3">
-                    <label for="name" class="form-label">Name</label>
-                    <input type="text"
-                      class="form-control form-control-lg" name="name" id="name" placeholder="Name">
+                    <label for="email" class="form-label">Adresse e-mail</label>
+                    <input type="email" class="form-control form-control-lg" name="email" id="email" placeholder="your@mail.com" required>
                   </div>
                   <div class="mb-3">
-                    <label for="" class="form-label">Email</label>
-                    <input type="email" class="form-control form-control-lg" name="email" id="email" placeholder="your@mail.com">
-                  </div>
-                  <div class="form-check form-check-inline mb-3">
-                    <label class="form-check-label" for="subscribe">
-                    <input class="form-check-input" type="checkbox" id="subscribe" value="subscribe">
-                    Subscribe to the newsletter</label>
+                    <label for="password" class="form-label">Mot de passe</label>
+                    <input type="password" class="form-control form-control-lg" name="password" id="password" placeholder="Mot de passe" required>
                   </div>
                   <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-dark btn-lg">Submit</button>
+                    <button type="submit" class="btn btn-dark btn-lg" name="success">Se connecter</button>
                   </div>
+                  
                 </form>
                 
               </div>

@@ -1,9 +1,30 @@
 <?php
+<<<<<<< HEAD
 $servername = "localhost";
 $username = "root";
 $password = "";
 $dbname = "projects"; 
 //FONCTION pour donner a chaque produit son image 
+=======
+session_start();
+require_once 'connexionbd.php';
+
+if (!isset($_SESSION['panier'])) {
+    $_SESSION['panier'] = [];
+}
+
+$cartCount = 0;
+$cartTotal = 0.0;
+foreach ($_SESSION['panier'] as $item) {
+    $cartCount += isset($item['quantity']) ? $item['quantity'] : 0;
+    $cartTotal += (isset($item['price']) ? $item['price'] : 0) * (isset($item['quantity']) ? $item['quantity'] : 0);
+}
+
+// Create shared database connection
+$conn = connectMaBasi();
+
+// Function to find product image with any extension
+>>>>>>> a6c1004 (new update)
 function findProductImage($productName) {
     $imageDir = 'images/prod_images/';
     $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
@@ -19,14 +40,6 @@ function findProductImage($productName) {
     return 'images/no-image.png';
 }
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
 // Get unique categories, subcategories, brands
 $categories = $conn->query("SELECT DISTINCT category FROM products ORDER BY category ASC");
 $subcategories = $conn->query("SELECT DISTINCT subcategory FROM products ORDER BY subcategory ASC");
@@ -38,8 +51,8 @@ $subcategory = isset($_GET['subcategory']) ? $_GET['subcategory'] : '';
 $brand = isset($_GET['brand']) ? $_GET['brand'] : '';
 $min_price = isset($_GET['min_price']) ? (float)$_GET['min_price'] : 0;
 $max_price = isset($_GET['max_price']) ? (float)$_GET['max_price'] : 100000;
-$sort_price = isset($_GET['sort_price']) ? $_GET['sort_price'] : 'none';
-$search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
+$sort_price = isset($_GET['sort_price']) ? $_GET['sort_price'] : 'none'; // triage by price 
+$search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : ''; //recherche par mot clé
 
 // Base query
 $sql = "SELECT * FROM products WHERE 1=1";
@@ -64,7 +77,7 @@ if (!empty($search)) {
     $sql .= " AND (name LIKE '%$search%' OR description LIKE '%$search%')";
 }
 
-// Add sorting by price if specified
+// fitlrage by price 
 if ($sort_price === 'asc') {
     $sql .= " ORDER BY price ASC";
 } elseif ($sort_price === 'desc') {
@@ -290,11 +303,15 @@ $result = $conn->query($sql);
           
           <!-- Support Section -->
           <div class="col-lg-4 col-md-2 col-sm-12">
-            <div class="support-box text-end d-flex justify-content-end align-items-center h-100">
+            <div class="support-box text-end d-flex justify-content-end align-items-center h-100 gap-3">
               <div class="d-none d-xl-block">
                 <span class="fs-6 text-muted">For Support?</span>
                 <h5 class="mb-0">+33-34984089</h5>
               </div>
+              <button type="button" class="btn btn-outline-primary position-relative" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
+                <svg width="24" height="24"><use xlink:href="#cart"></use></svg>
+                <span id="cart-count-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"><?php echo $cartCount; ?></span>
+              </button>
             </div>
           </div>
         </div>
@@ -340,6 +357,58 @@ $result = $conn->query($sql);
         </div>
       </div>
     </header>
+
+    <div class="offcanvas offcanvas-end" data-bs-scroll="true" tabindex="-1" id="offcanvasCart" aria-labelledby="offcanvasCartLabel">
+      <div class="offcanvas-header justify-content-between">
+        <h5 class="offcanvas-title" id="offcanvasCartLabel">Votre panier</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <div class="order-md-last">
+          <h4 class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-primary">Panier</span>
+            <span id="cart-sidebar-count" class="badge bg-primary rounded-pill"><?php echo $cartCount; ?></span>
+          </h4>
+          <ul class="list-group mb-3" id="cart-items-list">
+            <?php
+            if (!empty($_SESSION['panier'])) {
+              foreach ($_SESSION['panier'] as $product_id => $product) {
+                echo '<li class="list-group-item d-flex justify-content-between lh-sm">';
+                echo '<div>';
+                echo '<h6 class="my-0">' . htmlspecialchars($product['name']) . '</h6>';
+                echo '<small class="text-muted">Prix: $' . number_format($product['price'], 2) . ' x ' . $product['quantity'] . '</small>';
+                echo '</div>';
+                echo '<div class="text-end">';
+                echo '<form action="ajouter_panier.php" method="POST" class="d-inline">';
+                echo '<input type="hidden" name="product_id" value="' . $product_id . '">';
+                echo '<input type="number" name="quantity" value="' . $product['quantity'] . '" min="1" class="form-control d-inline w-50">';
+                echo '<button type="submit" name="update" class="btn btn-sm btn-success">Modifier</button>';
+                echo '</form> ';
+                echo '<form action="ajouter_panier.php" method="POST" class="d-inline">';
+                echo '<input type="hidden" name="product_id" value="' . $product_id . '">';
+                echo '<button type="submit" name="delete" class="btn btn-sm btn-danger">Supprimer</button>';
+                echo '</form>';
+                echo '</div>';
+                echo '</li>';
+              }
+            } else {
+              echo '<li class="list-group-item d-flex justify-content-between lh-sm">';
+              echo '<div><h6 class="my-0">Votre panier est vide</h6></div>';
+              echo '</li>';
+            }
+            ?>
+            <li class="list-group-item d-flex justify-content-between">
+              <span>Total (USD)</span>
+              <strong id="cart-total-value"><?php echo '$' . number_format($cartTotal, 2); ?></strong>
+            </li>
+          </ul>
+          <div class="d-flex justify-content-between mt-4">
+            <a href="effectuer_commande.php" class="btn btn-success">Effectuer commande</a>
+            <a href="filtrage.php" class="btn btn-primary">Continuer les achats</a>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <section class="py-5">
       <div class="container-fluid">
@@ -423,7 +492,7 @@ $result = $conn->query($sql);
                     <h3><?php echo htmlspecialchars($row['name']); ?></h3>
                     <span class="qty"><?php echo htmlspecialchars($row['brand']); ?> | <?php echo htmlspecialchars($row['subcategory']); ?></span>
                     <span class="price">$<?php echo number_format($row['price'], 2); ?></span>
-                    <form action="ajouter_panier.php" method="POST">
+                    <form action="ajouter_panier.php" method="POST" class="ajax-add-to-cart">
                     <div class="d-flex align-items-center justify-content-between">
                       <div class="input-group product-qty">
                           <span class="input-group-btn">
@@ -431,6 +500,7 @@ $result = $conn->query($sql);
                               <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
                               <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($row['name']); ?>">
                               <input type="hidden" name="product_price" value="<?php echo $row['price']; ?>">
+                              <input type="hidden" name="add" value="1">
                               <button type="button" class="quantity-left-minus btn btn-danger btn-number" data-type="minus">
                                 <svg width="16" height="16"><use xlink:href="#minus"></use></svg>
                               </button>
@@ -469,6 +539,102 @@ $result = $conn->query($sql);
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15.7.0/dist/nouislider.min.css">
     <!-- noUiSlider JS -->
     <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.0/dist/nouislider.min.js"></script>
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+      <div id="cart-toast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">Produit ajouté au panier.</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const cartCountBadge = document.getElementById('cart-count-badge');
+      const cartToastEl = document.getElementById('cart-toast');
+      const cartToast = cartToastEl ? new bootstrap.Toast(cartToastEl) : null;
+
+      document.querySelectorAll('form.ajax-add-to-cart').forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+          event.preventDefault();
+          const submitButton = form.querySelector('input[type="submit"]');
+          const formData = new FormData(form);
+          formData.append('ajax', '1');
+
+          fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            }
+          })
+          .then(function(response) {
+            return response.json();
+          })
+          .then(function(data) {
+            if (data.success) {
+              if (cartCountBadge) {
+                cartCountBadge.textContent = data.cart_count;
+              }
+              var cartSidebarCount = document.getElementById('cart-sidebar-count');
+              if (cartSidebarCount) {
+                cartSidebarCount.textContent = data.cart_count;
+              }
+              if (data.cart_items_html) {
+                var cartItemsList = document.getElementById('cart-items-list');
+                if (cartItemsList) {
+                  cartItemsList.innerHTML = data.cart_items_html;
+                }
+              }
+              if (data.cart_total !== undefined) {
+                var cartTotalValue = document.getElementById('cart-total-value');
+                if (cartTotalValue) {
+                  cartTotalValue.textContent = '$' + parseFloat(data.cart_total).toFixed(2);
+                }
+              }
+              if (cartToast) {
+                cartToastEl.querySelector('.toast-body').textContent = data.message;
+                cartToast.show();
+              }
+              if (submitButton) {
+                submitButton.value = 'Added';
+                submitButton.classList.remove('btn-primary');
+                submitButton.classList.add('btn-success');
+                setTimeout(function() {
+                  submitButton.value = 'Add to Cart';
+                  submitButton.classList.remove('btn-success');
+                  submitButton.classList.add('btn-primary');
+                }, 1200);
+              }
+            } else {
+              if (cartToast) {
+                cartToastEl.classList.remove('bg-success');
+                cartToastEl.classList.add('bg-danger');
+                cartToastEl.querySelector('.toast-body').textContent = data.message || 'Impossible d\'ajouter le produit.';
+                cartToast.show();
+                setTimeout(function() {
+                  cartToastEl.classList.remove('bg-danger');
+                  cartToastEl.classList.add('bg-success');
+                }, 1800);
+              }
+            }
+          })
+          .catch(function() {
+            if (cartToast) {
+              cartToastEl.classList.remove('bg-success');
+              cartToastEl.classList.add('bg-danger');
+              cartToastEl.querySelector('.toast-body').textContent = 'Une erreur est survenue. Réessayez.';
+              cartToast.show();
+              setTimeout(function() {
+                cartToastEl.classList.remove('bg-danger');
+                cartToastEl.classList.add('bg-success');
+              }, 1800);
+            }
+          });
+        });
+      });
+    });
+    </script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
       var slider = document.getElementById('price-slider');

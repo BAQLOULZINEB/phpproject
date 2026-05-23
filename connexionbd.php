@@ -1,6 +1,6 @@
 <?php
 function connectMaBasi(){
-$basi=mysqli_connect("localhost","root","","projects");
+$basi=mysqli_connect("localhost","root","root","projects");
 
 if (!$basi) {
     die("Connection failed: " . mysqli_connect_error());

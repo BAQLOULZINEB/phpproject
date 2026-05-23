@@ -1,0 +1,7 @@
+pyspark
+minio
+fastapi
+uvicorn
+pymysql
+pandas
+numpy
