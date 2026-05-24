@@ -1367,7 +1367,7 @@ def _render_rec_card(rec, items_df):
                 image_source = str(candidate)
 
     if image_source:
-        st.image(image_source, use_column_width=True)
+        st.image(image_source, width=320)
     else:
         st.markdown("<div style='width:100%;height:220px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:2rem;border-radius:16px;'>🖼</div>", unsafe_allow_html=True)
 

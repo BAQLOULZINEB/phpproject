@@ -100,6 +100,45 @@ if (!function_exists('ensureProductsCreatedAt')) {
     }
 }
 
+function runExportToMinio() {
+    if (!function_exists('shell_exec')) {
+        return;
+    }
+
+    $projectRoot = realpath(__DIR__ . '/..');
+    $scriptPath = realpath($projectRoot . '/recommender/export_to_minio.py');
+    if (!$scriptPath) {
+        return;
+    }
+
+    $pythonCandidates = [
+        $projectRoot . '/venv/Scripts/python.exe',
+        $projectRoot . '/venv/Scripts/python',
+        'py -3',
+        'python',
+    ];
+
+    foreach ($pythonCandidates as $python) {
+        $python = trim($python);
+        if (empty($python)) {
+            continue;
+        }
+
+        if (strpos($python, '/') !== false || strpos($python, '\\') !== false) {
+            if (!file_exists($python)) {
+                continue;
+            }
+        }
+
+        $cmd = escapeshellcmd($python) . ' ' . escapeshellarg($scriptPath) . ' 2>&1';
+        $output = shell_exec($cmd);
+        if ($output !== null) {
+            file_put_contents($projectRoot . '/recommender/export_to_minio.log', date('c') . ' - ' . $cmd . '\n' . $output . '\n', FILE_APPEND);
+            return;
+        }
+    }
+}
+
 // Ensure connection exists
 if (!isset($basi)) {
     $basi = connectMaBasi();
@@ -130,6 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $query = "INSERT INTO products (name, description, price, category, subcategory, brand, image_url) 
                   VALUES ('$name', '$description', $price, '$category', '$subcategory', '$brand', '$image_url')";
         mysqli_query($basi, $query);
+        runExportToMinio();
         header("Location: admin_dashboard_hub.php?tab=products&action=added");
         exit();
     }
@@ -139,6 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $product_id = intval($_POST['product_id']);
         $query = "DELETE FROM products WHERE id = $product_id";
         mysqli_query($basi, $query);
+        runExportToMinio();
         header("Location: admin_dashboard_hub.php?tab=products&action=deleted");
         exit();
     }
@@ -175,6 +216,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   category = '$category', subcategory = '$subcategory', brand = '$brand' $image_sql 
                   WHERE id = $product_id";
         mysqli_query($basi, $query);
+        runExportToMinio();
         header("Location: admin_dashboard_hub.php?tab=products&action=updated");
         exit();
     }
