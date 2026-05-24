@@ -21,7 +21,14 @@ if (!$product) {
     exit();
 }
 
-function findProductImage($productName) {
+function findProductImage($productName, $imageUrl = '') {
+    if (!empty($imageUrl)) {
+        $absoluteUrl = __DIR__ . '/' . $imageUrl;
+        if (file_exists($absoluteUrl)) {
+            return $imageUrl;
+        }
+    }
+
     $imageDir = 'images/prod_images/';
     $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
     foreach ($allowedExtensions as $ext) {
@@ -33,7 +40,7 @@ function findProductImage($productName) {
     return 'images/no-image.png';
 }
 
-$image = findProductImage($product['name']);
+$image = findProductImage($product['name'], isset($product['image_url']) ? $product['image_url'] : '');
 ?>
 <?php
 

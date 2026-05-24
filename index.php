@@ -1,11 +1,76 @@
 <?php 
 session_start();
+require_once 'connexionbd.php';
+
 if (!isset($_SESSION['panier'])) {
     $_SESSION['panier'] = [];
 }
 $cartCount = 0;
 foreach ($_SESSION['panier'] as $item) {
     $cartCount += isset($item['quantity']) ? intval($item['quantity']) : 0;
+}
+
+$conn = connectMaBasi();
+
+function findProductImage($productName, $imageUrl = '') {
+    $imageDir = 'images/prod_images/';
+    $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
+
+    if (!empty($imageUrl)) {
+        if (file_exists($imageUrl)) {
+            return $imageUrl;
+        }
+        if (file_exists($imageDir . $imageUrl)) {
+            return $imageDir . $imageUrl;
+        }
+    }
+
+    $productNameClean = trim($productName);
+    foreach ($allowedExtensions as $ext) {
+        $imagePath = $imageDir . $productNameClean . '.' . $ext;
+        if (file_exists($imagePath)) {
+            return $imagePath;
+        }
+    }
+
+    return 'images/no-image.png';
+}
+
+$trendingProducts = [];
+$bestSellingProducts = [];
+
+$trendingResult = $conn->query("SELECT * FROM products ORDER BY id DESC LIMIT 10");
+if ($trendingResult) {
+    while ($row = $trendingResult->fetch_assoc()) {
+        $trendingProducts[] = $row;
+    }
+}
+
+$bestSellingSql = "
+    SELECT p.*
+    FROM products p
+    JOIN (
+        SELECT id_produit, SUM(quantite) AS total_qty
+        FROM ligne_commande
+        GROUP BY id_produit
+        ORDER BY total_qty DESC
+        LIMIT 10
+    ) s ON p.id = s.id_produit
+";
+$bestSellingResult = $conn->query($bestSellingSql);
+if ($bestSellingResult) {
+    while ($row = $bestSellingResult->fetch_assoc()) {
+        $bestSellingProducts[] = $row;
+    }
+}
+
+if (empty($bestSellingProducts)) {
+    $fallbackBestResult = $conn->query("SELECT * FROM products ORDER BY id DESC LIMIT 10");
+    if ($fallbackBestResult) {
+        while ($row = $fallbackBestResult->fetch_assoc()) {
+            $bestSellingProducts[] = $row;
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -176,7 +241,7 @@ foreach ($_SESSION['panier'] as $item) {
   <div class="offcanvas-body">
     <div class="order-md-last">
       <h4 class="d-flex justify-content-between align-items-center mb-3">
-        <span class="text-primary">Your cart</span>
+        <span class="text-primary">cart</span>
         <span class="badge bg-primary rounded-pill">
           <?php echo isset($_SESSION['panier']) ? count($_SESSION['panier']) : 0; ?>
         </span>
@@ -317,7 +382,7 @@ foreach ($_SESSION['panier'] as $item) {
 </li>
                 </li>
                 <li>
-                  <a href="#" class="rounded-circle bg-light p-2 mx-1">
+                  <a href="logout.php" class="rounded-circle bg-light p-2 mx-1" title="Log out" aria-label="Log out">
                     <svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#heart"></use></svg>
                   </a>
                 </li>
@@ -336,7 +401,7 @@ foreach ($_SESSION['panier'] as $item) {
               <div class="cart text-end d-none d-lg-block ms-4">
                 <button class="border-0 bg-transparent d-flex align-items-center gap-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
                   <svg width="24" height="24"><use xlink:href="#cart"></use></svg>
-                  <span class="fs-6 text-muted">Your Cart</span>
+                  <span class="fs-6 text-muted"> Cart</span>
                   <span id="cart-count-badge" class="badge bg-success rounded-pill"><?php echo $cartCount; ?></span>
                 </button>
               </div>
@@ -349,7 +414,7 @@ foreach ($_SESSION['panier'] as $item) {
       <div class="container-fluid">
         <div class="row py-3">
           <div class="col-12">
-            <nav class="main-menu navbar navbar-expand-lg">
+            <nav class="main-menu navbar navbar-expand-lg justify-content-center">
               <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
                 <span class="navbar-toggler-icon"></span>
               </button>
@@ -360,7 +425,7 @@ foreach ($_SESSION['panier'] as $item) {
                   <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                 </div>
 
-                <div class="offcanvas-body">
+                <div class="offcanvas-body d-flex justify-content-center">
                   <ul class="navbar-nav justify-content-center menu-list list-unstyled d-flex gap-md-3 mb-0">
                     <li class="nav-item" id="home">
                       <a href="index.php" class="nav-link">Home</a>
@@ -706,209 +771,49 @@ foreach ($_SESSION['panier'] as $item) {
                 <div class="tab-pane fade show active" id="nav-all" role="tabpanel" aria-labelledby="nav-all-tab">
 
                   <div class="product-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5">
-                  
-                    <div class="col">
-                      <div class="product-item">
-                        <span class="badge bg-success position-absolute m-3">-30%</span>
-                        <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                        <figure>
-                          <a href="index.php" title="Product Title">
-                            <img src="images/thumb-bananas.png"  class="tab-image">
-                          </a>
-                        </figure>
-                        <h3>Elemis Pro-Collagen Black Cherry Cleansing Balm 100g</h3>
-                        <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                        <span class="price">$18.00</span>
-                        <div class="d-flex align-items-center justify-content-between">
-                          <div class="input-group product-qty">
-                              
+                    <?php if (!empty($trendingProducts)): ?>
+                      <?php foreach ($trendingProducts as $product): ?>
+                        <?php
+                          $productId = intval($product['id']);
+                          $productName = htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8');
+                          $productImage = findProductImage($product['name'], isset($product['image_url']) ? $product['image_url'] : '');
+                          $productPrice = number_format(floatval($product['price']), 2);
+                        ?>
+                        <div class="col">
+                          <div class="product-item">
+                            <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
+                            <figure>
+                              <a href="product.php?id=<?php echo $productId; ?>" title="<?php echo $productName; ?>">
+                                <img src="<?php echo $productImage; ?>" class="tab-image" alt="<?php echo $productName; ?>">
+                              </a>
+                            </figure>
+                            <h3><?php echo $productName; ?></h3>
+                            <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
+                            <span class="price">$<?php echo $productPrice; ?></span>
+                            <div class="d-flex align-items-center justify-content-between">
+                              <div class="input-group product-qty"></div>
+                            </div>
                           </div>
-                            
+                        </div>
+                      <?php endforeach; ?>
+                    <?php else: ?>
+                      <div class="col">
+                        <div class="product-item">
+                          <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
+                          <figure>
+                            <a href="filtrage.php" title="No products available">
+                              <img src="images/no-image.png" class="tab-image" alt="Aucun produit disponible">
+                            </a>
+                          </figure>
+                          <h3>Aucun produit disponible</h3>
+                          <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 0.0</span>
+                          <span class="price">$0.00</span>
+                          <div class="d-flex align-items-center justify-content-between">
+                            <div class="input-group product-qty"></div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-
-                    <div class="col">
-                      <div class="product-item">
-                        <span class="badge bg-success position-absolute m-3">-30%</span>
-                        <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                        <figure>
-                          <a href="index.php" title="Product Title">
-                            <img src="images/thumb-biscuits.png"  class="tab-image">
-                          </a>
-                        </figure>
-                        <h3>Summer Fridays Lip Butter Balm 15g (Various Shades)</h3>
-                        <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                        <span class="price">$34.00</span>
-                        <div class="d-flex align-items-center justify-content-between">
-                          <div class="input-group product-qty">
-                              
-                          </div>
-                            
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="col">
-                      <div class="product-item">
-                        <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                        <figure>
-                          <a href="index.php" title="Product Title">
-                            <img src="images/thumb-cucumber.png"  class="tab-image">
-                          </a>
-                        </figure>
-                        <h3>LYMA Laser Starter Kit</h3>
-                        <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                        <span class="price">$45.00</span>
-                        <div class="d-flex align-items-center justify-content-between">
-                          <div class="input-group product-qty">
-                              
-                          </div>
-                            
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="col">
-                      <div class="product-item">
-                        <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                        <figure>
-                          <a href="index.php" title="Product Title">
-                            <img src="images/thumb-milk.png"  class="tab-image">
-                          </a>
-                        </figure>
-                        <h3>Augustinus Bader The Face Cream Mask 50ml</h3>
-                        <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                        <span class="price">$156.00</span>
-                        <div class="d-flex align-items-center justify-content-between">
-                          <div class="input-group product-qty">
-                              
-                          </div>
-                            
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="col">
-                      <div class="product-item">
-                        <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                        <figure>
-                          <a href="index.php" title="Product Title">
-                            <img src="images/thumb-bananas.png"  class="tab-image">
-                          </a>
-                        </figure>
-                        <h3>Drunk Elephant B-Hydra Intensive Hydration Serum 50ml</h3>
-                        <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                        <span class="price">$40.00</span>
-                        <div class="d-flex align-items-center justify-content-between">
-                          <div class="input-group product-qty">
-                              
-                          </div>
-                            
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="col">
-                      <div class="product-item">
-                        <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                        <figure>
-                          <a href="index.php" title="Product Title">
-                            <img src="images/thumb-biscuits.png"  class="tab-image">
-                          </a>
-                        </figure>
-                        <h3>Drunk Elephant Lala Retro Whipped Cream 50ml</h3>
-                        <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                        <span class="price">$55.00</span>
-                        <div class="d-flex align-items-center justify-content-between">
-                          <div class="input-group product-qty">
-                              
-                          </div>
-                            
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="col">
-                      <div class="product-item">
-                        <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                        <figure>
-                          <a href="index.php" title="Product Title">
-                            <img src="images/thumb-cucumber.png"  class="tab-image">
-                          </a>
-                        </figure>
-                        <h3>Glow Recipe Cloudberry Bright Moisture Cream 50ml</h3>
-                        <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                        <span class="price">$32.54</span>
-                        <div class="d-flex align-items-center justify-content-between">
-                          <div class="input-group product-qty">
-                              
-                          </div>
-                            
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="col">
-                      <div class="product-item">
-                        <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                        <figure>
-                          <a href="index.php" title="Product Title">
-                            <img src="images/thumb-milk.png"  class="tab-image">
-                          </a>
-                        </figure>
-                        <h3>Glow Recipe Cloudberry Bright Moisture Cream 50ml</h3>
-                        <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                        <span class="price">$18.00</span>
-                        <div class="d-flex align-items-center justify-content-between">
-                          <div class="input-group product-qty">
-                              
-                          </div>
-                            
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="col">
-                      <div class="product-item">
-                        <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                        <figure>
-                          <a href="index.php" title="Product Title">
-                            <img src="images/thumb-bananas.png"  class="tab-image">
-                          </a>
-                        </figure>
-                        <h3>Kate Somerville Goat Milk Moisturising Cleanser 120ml</h3>
-                        <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                        <span class="price">$35.20</span>
-                        <div class="d-flex align-items-center justify-content-between">
-                          <div class="input-group product-qty">
-                              
-                          </div>
-                            
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="col">
-                      <div class="product-item">
-                        <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                        <figure>
-                          <a href="index.php" title="Product Title">
-                            <img src="images/thumb-biscuits.png"  class="tab-image">
-                          </a>
-                        </figure>
-                        <h3>Ultra Violette Supreme Screen Hydrating Facial Skinscreen SPF 50+</h3>
-                        <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                        <span class="price">$32.72</span>
-                        <div class="d-flex align-items-center justify-content-between">
-                          <div class="input-group product-qty">
-                              
-                          </div>
-                            
-                        </div>
-                      </div>
-                    </div>
-
+                    <?php endif; ?>
                   </div>
                   <!-- / product-grid -->
                   
@@ -1195,7 +1100,7 @@ foreach ($_SESSION['panier'] as $item) {
                 <div class="categories text-primary fs-3 fw-bold">Upto 25% Off</div>
                 <h3 class="banner-title">Luxa  Bag Organizer </h3>
                 <p>Very tasty & creamy vanilla flavour creamy muffins.</p>
-                <a href="#" class="btn btn-dark text-uppercase">Show Now</a>
+                <a href="filtrage.php?subcategory=Bag" class="btn btn-dark text-uppercase">Show Now</a>
 
               </div>
             
@@ -1208,7 +1113,7 @@ foreach ($_SESSION['panier'] as $item) {
                 <div class="categories text-primary fs-3 fw-bold">Upto 25% Off</div>
                 <h3 class="banner-title">Creamy Serum</h3>
                 <p>Very tasty & creamy vanilla flavour creamy Serums.</p>
-                <a href="#" class="btn btn-dark text-uppercase">Show Now</a>
+                <a href="filtrage.php?subcategory=Gift%20Pack" class="btn btn-dark text-uppercase">Show Now</a>
 
               </div>
             
@@ -1244,154 +1149,47 @@ foreach ($_SESSION['panier'] as $item) {
 
             <div class="products-carousel swiper">
               <div class="swiper-wrapper">
-                
-                <div class="product-item swiper-slide">
-                  <span class="badge bg-success position-absolute m-3">-35%</span>
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-tomatoes.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>Urban Decay All Nighter Setting Spray</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$22.6</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                        
+                <?php if (!empty($bestSellingProducts)): ?>
+                  <?php foreach ($bestSellingProducts as $product): ?>
+                    <?php
+                      $productId = intval($product['id']);
+                      $productName = htmlspecialchars($product['name'], ENT_QUOTES, 'UTF-8');
+                      $productImage = findProductImage($product['name'], isset($product['image_url']) ? $product['image_url'] : '');
+                      $productPrice = number_format(floatval($product['price']), 2);
+                    ?>
+                    <div class="product-item swiper-slide">
+                      <span class="badge bg-success position-absolute m-3">Top</span>
+                      <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
+                      <figure>
+                        <a href="product.php?id=<?php echo $productId; ?>" title="<?php echo $productName; ?>">
+                          <img src="<?php echo $productImage; ?>" class="tab-image" alt="<?php echo $productName; ?>">
+                        </a>
+                      </figure>
+                      <h3><?php echo $productName; ?></h3>
+                      <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
+                      <span class="price">$<?php echo $productPrice; ?></span>
+                      <div class="d-flex align-items-center justify-content-between">
+                        <div class="input-group product-qty"></div>
+                      </div>
                     </div>
-                      
-                  </div>
-                </div>
-
-                <div class="product-item swiper-slide">
-                  <span class="badge bg-success position-absolute m-3">-35%</span>
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-tomatoketchup.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>SUltra Violette Supreme Screen Hydrating Facial Skinscreen SPF 50+</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$45.68</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                      
+                  <?php endforeach; ?>
+                <?php else: ?>
+                  <div class="product-item swiper-slide">
+                    <span class="badge bg-success position-absolute m-3">Top</span>
+                    <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
+                    <figure>
+                      <a href="filtrage.php" title="No products available">
+                        <img src="images/no-image.png" class="tab-image" alt="Aucun produit disponible">
+                      </a>
+                    </figure>
+                    <h3>Aucun produit disponible</h3>
+                    <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 0.0</span>
+                    <span class="price">$0.00</span>
+                    <div class="d-flex align-items-center justify-content-between">
+                      <div class="input-group product-qty"></div>
                     </div>
-                    
                   </div>
-                </div>
-
-                <div class="product-item swiper-slide">
-                  <span class="badge bg-success position-absolute m-3">-25%</span>
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-bananas.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>Drunk Elephant Lala Retro Whipped Cream 50ml</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$69.89</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                        
-                    </div>
-                      
-                  </div>
-                </div>
-
-                <div class="product-item swiper-slide">
-                  <span class="badge bg-success position-absolute m-3">-50%</span>
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-bananas.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>BYOMA Hydrating Serum 30ml</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$65..50</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                        
-                    </div>
-                      
-                  </div>
-                </div>
-                <div class="product-item swiper-slide">
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-tomatoes.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>LANEIGE Lip Sleeping Mask - Berry</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$18.20</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                        
-                    </div>
-                      
-                  </div>
-                </div>
-
-                <div class="product-item swiper-slide">
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-tomatoketchup.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>Color Wow Travel Dream Coat </h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$13.65</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                        
-                    </div>
-                      
-                  </div>
-                </div>
-
-                <div class="product-item swiper-slide">
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-bananas.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>Kate Somerville Goat Milk Moisturising Cleanser 120ml</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$34.40</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                        
-                    </div>
-                      
-                  </div>
-                </div>
-
-                <div class="product-item swiper-slide">
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-bananas.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>LYMA Laser Starter Kit</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$182.00</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                        
-                    </div>
-                      
-                  </div>
-                </div>
-                
+                <?php endif; ?>
               </div>
             </div>
             <!-- / products-carousel -->
@@ -1640,150 +1438,52 @@ foreach ($_SESSION['panier'] as $item) {
 
             <div class="products-carousel swiper">
               <div class="swiper-wrapper">
-                
-                <div class="product-item swiper-slide">
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-tomatoes.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>SVIEVE Skin Highlighter - Nova 10ml</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">57.35</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                       
+                <?php
+                // Load recent products ordered by created_at (most recent first)
+                $recent_sql = "SELECT * FROM products ORDER BY ";
+                // prefer created_at if column exists, else fallback to id
+                $recent_sql .= "CASE WHEN created_at IS NOT NULL THEN created_at ELSE id END DESC, id DESC LIMIT 10";
+                $recent_result = $conn->query($recent_sql);
+                if ($recent_result && $recent_result->num_rows > 0) {
+                    while ($p = $recent_result->fetch_assoc()) {
+                        $img = findProductImage($p['name'], isset($p['image_url']) ? $p['image_url'] : '');
+                        $price = isset($p['price']) ? number_format((float)$p['price'], 2) : '';
+                        $rating = isset($p['rating']) ? htmlspecialchars($p['rating']) : '4.5';
+                        $productName = htmlspecialchars($p['name']);
+                        $productId = (int)$p['id'];
+                        ?>
+                        <div class="product-item swiper-slide">
+                          <a href="product.php?id=<?php echo $productId; ?>" class="btn-wishlist" title="Add to wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
+                          <figure>
+                            <a href="product.php?id=<?php echo $productId; ?>" title="<?php echo $productName; ?>">
+                              <img src="<?php echo htmlspecialchars($img); ?>" class="tab-image" alt="<?php echo $productName; ?>">
+                            </a>
+                          </figure>
+                          <h3><?php echo $productName; ?></h3>
+                          <span class="qty">1 Unit</span>
+                          <span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> <?php echo $rating; ?></span>
+                          <span class="price"><?php echo '$' . $price; ?></span>
+                          <div class="d-flex align-items-center justify-content-between">
+                            <div class="input-group product-qty">
+                              <!-- qty controls can go here -->
+                            </div>
+                          </div>
+                        </div>
+                        <?php
+                    }
+                } else {
+                    // Fallback: show a placeholder slide if no products
+                    ?>
+                    <div class="product-item swiper-slide">
+                      <figure>
+                        <img src="images/no-image.png" class="tab-image" alt="No products">
+                      </figure>
+                      <h3>No recent products</h3>
+                      <span class="price">—</span>
                     </div>
-                      
-                  </div>
-                </div>
-
-                <div class="product-item swiper-slide">
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-tomatoketchup.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>The INKEY List Retinol Serum 30ml</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$132.40</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                     
-                    </div>
-                      
-                  </div>
-                </div>
-
-                <div class="product-item swiper-slide">
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-bananas.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>SLANEIGE Lip Sleeping Mask - Berry</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$18.43</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                        
-                    </div>
-                      
-                  </div>
-                </div>
-
-                <div class="product-item swiper-slide">
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-bananas.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>Ultra Violette Supreme Screen Hydrating Facial Skinscreen SPF 50+</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$11.34</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                        
-                    </div>
-                      
-                  </div>
-                </div>
-                <div class="product-item swiper-slide">
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-tomatoes.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>Huda Beauty Baby Bake 6g</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$18.00</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                      
-                    </div>
-                      
-                  </div>
-                </div>
-
-                <div class="product-item swiper-slide">
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-tomatoketchup.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>Kate Somerville Goat Milk Moisturising Cleanser 120ml</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$153.00</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                       
-                    </div>
-                      
-                  </div>
-                </div>
-
-                <div class="product-item swiper-slide">
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-bananas.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>Summer Fridays Lip Butter Balm 15g (Various Shades)</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$12.60</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                       
-                    </div>
-                      
-                  </div>
-                </div>
-
-                <div class="product-item swiper-slide">
-                  <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
-                  <figure>
-                    <a href="index.php" title="Product Title">
-                      <img src="images/thumb-bananas.png"  class="tab-image">
-                    </a>
-                  </figure>
-                  <h3>Glow Recipe Cloudberry Bright Moisture Cream 50ml</h3>
-                  <span class="qty">1 Unit</span><span class="rating"><svg width="24" height="24" class="text-primary"><use xlink:href="#star-solid"></use></svg> 4.5</span>
-                  <span class="price">$35.</span>
-                  <div class="d-flex align-items-center justify-content-between">
-                    <div class="input-group product-qty">
-                        
-                    </div>
-                    
-                  </div>
-                </div>
-                
+                    <?php
+                }
+                ?>
               </div>
             </div>
             <!-- / products-carousel -->
@@ -1799,7 +1499,7 @@ foreach ($_SESSION['panier'] as $item) {
           <div class="section-header d-flex align-items-center justify-content-between my-5">
             <h2 class="section-title">Our Recent Blog</h2>
             <div class="btn-wrap align-right">
-              <a href="#" class="d-flex align-items-center nav-link">Read All Articles <svg width="24" height="24"><use xlink:href="#arrow-right"></use></svg></a>
+              <a href="https://www.allure.com/beauty" target="_blank" rel="noopener noreferrer" class="d-flex align-items-center nav-link">Read All Articles <svg width="24" height="24"><use xlink:href="#arrow-right"></use></svg></a>
             </div>
           </div>
         </div>
@@ -1807,20 +1507,20 @@ foreach ($_SESSION['panier'] as $item) {
           <div class="col-md-4">
             <article class="post-item card border-0 shadow-sm p-3">
               <div class="image-holder zoom-effect">
-                <a href="#">
-                  <img src="images/post-thumb-1-new.png" alt="post" class="card-img-top">
+                <a href="https://www.allure.com/gallery/easy-makeup-looks-for-beginners" target="_blank" rel="noopener noreferrer">
+                  <img src="images/post-thumb-1-new.png" alt="Top 10 casual makeup looks" class="card-img-top">
                 </a>
               </div>
               <div class="card-body">
                 <div class="post-meta d-flex text-uppercase gap-3 my-2 align-items-center">
-                  <div class="meta-date"><svg width="16" height="16"><use xlink:href="#calendar"></use></svg>22 Aug 2021</div>
+                  <div class="meta-date"><svg width="16" height="16"><use xlink:href="#calendar"></use></svg>22 Aug 2024</div>
                   <div class="meta-categories"><svg width="16" height="16"><use xlink:href="#category"></use></svg>tips & tricks</div>
                 </div>
                 <div class="post-header">
                   <h3 class="post-title">
-                    <a href="#" class="text-decoration-none">Top 10 casual look ideas to MAKEUP</a>
+                    <a href="https://www.allure.com/gallery/easy-makeup-looks-for-beginners" target="_blank" rel="noopener noreferrer" class="text-decoration-none">Top 10 casual look ideas to makeup</a>
                   </h3>
-                  <p>Lorem ipsum dolor sit amet, consectetur adipi elit. Aliquet eleifend viverra enim tincidunt donec quam. A in arcu, hendrerit neque dolor morbi...</p>
+                  <p>Discover 10 easy daytime makeup ideas, from soft bronzer and natural lashes to minimalist glow looks that work for every casual occasion.</p>
                 </div>
               </div>
             </article>
@@ -1828,8 +1528,8 @@ foreach ($_SESSION['panier'] as $item) {
           <div class="col-md-4">
             <article class="post-item card border-0 shadow-sm p-3">
               <div class="image-holder zoom-effect">
-                <a href="#">
-                  <img src="images/post-thumb-2.png" alt="post" class="card-img-top">
+                <a href="https://www.vogue.com/article/tiktok-beauty-trends-2024" target="_blank" rel="noopener noreferrer">
+                  <img src="images/post-thumb-2.png" alt="TikTok beauty trends" class="card-img-top">
                 </a>
               </div>
               <div class="card-body">
@@ -1839,9 +1539,9 @@ foreach ($_SESSION['panier'] as $item) {
                 </div>
                 <div class="post-header">
                   <h3 class="post-title">
-                    <a href="#" class="text-decoration-none">Latest trends of TIKTOK s supremely</a>
+                    <a href="https://www.vogue.com/article/tiktok-beauty-trends-2024" target="_blank" rel="noopener noreferrer" class="text-decoration-none">Latest TikTok beauty trends supremely</a>
                   </h3>
-                  <p>Lorem ipsum dolor sit amet, consectetur adipi elit. Aliquet eleifend viverra enim tincidunt donec quam. A in arcu, hendrerit neque dolor morbi...</p>
+                  <p>Stay ahead with the latest TikTok-driven beauty trends, including glass skin, mood-boosting color, and quick skincare routines that are going viral.</p>
                 </div>
               </div>
             </article>
@@ -1849,20 +1549,20 @@ foreach ($_SESSION['panier'] as $item) {
           <div class="col-md-4">
             <article class="post-item card border-0 shadow-sm p-3">
               <div class="image-holder zoom-effect">
-                <a href="#">
-                  <img src="images/post-thumb-3.png" alt="post" class="card-img-top">
+                <a href="https://www.healthline.com/health/beauty-skin-care/face-serum" target="_blank" rel="noopener noreferrer">
+                  <img src="images/post-thumb-3.png" alt="Serum guide for women" class="card-img-top">
                 </a>
               </div>
               <div class="card-body">
                 <div class="post-meta d-flex text-uppercase gap-3 my-2 align-items-center">
-                  <div class="meta-date"><svg width="16" height="16"><use xlink:href="#calendar"></use></svg>28 Aug 2021</div>
+                  <div class="meta-date"><svg width="16" height="16"><use xlink:href="#calendar"></use></svg>28 Aug 2024</div>
                   <div class="meta-categories"><svg width="16" height="16"><use xlink:href="#category"></use></svg>inspiration</div>
                 </div>
                 <div class="post-header">
                   <h3 class="post-title">
-                    <a href="#" class="text-decoration-none">10 Different Types of SERUMES  ideas for women</a>
+                    <a href="https://www.healthline.com/health/beauty-skin-care/face-serum" target="_blank" rel="noopener noreferrer" class="text-decoration-none">10 different types of serums ideas for women</a>
                   </h3>
-                  <p>Lorem ipsum dolor sit amet, consectetur adipi elit. Aliquet eleifend viverra enim tincidunt donec quam. A in arcu, hendrerit neque dolor morbi...</p>
+                  <p>Learn how to choose the best serum for hydration, brightening, anti-aging, and acne-prone skin with practical tips for your daily routine.</p>
                 </div>
               </div>
             </article>
@@ -1908,7 +1608,7 @@ foreach ($_SESSION['panier'] as $item) {
                 <div class="col-md-10">
                   <div class="card-body p-0">
                     <h5>Free delivery</h5>
-                    <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipi elit.</p>
+                    <p class="card-text">Free delivery across France on orders over €50 — fast, discreet shipping from our Glow & Shine warehouse.</p>
                   </div>
                 </div>
               </div>
@@ -1923,7 +1623,7 @@ foreach ($_SESSION['panier'] as $item) {
                 <div class="col-md-10">
                   <div class="card-body p-0">
                     <h5>100% secure payment</h5>
-                    <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipi elit.</p>
+                    <p class="card-text">Secure checkout with SSL and trusted gateways (Stripe, PayPal). Your payment details are never stored on our servers.</p>
                   </div>
                 </div>
               </div>
@@ -1938,7 +1638,7 @@ foreach ($_SESSION['panier'] as $item) {
                 <div class="col-md-10">
                   <div class="card-body p-0">
                     <h5>Quality guarantee</h5>
-                    <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipi elit.</p>
+                    <p class="card-text">We only sell authentic, brand‑approved beauty products — dermatologist tested and backed by our satisfaction policy.</p>
                   </div>
                 </div>
               </div>
@@ -1953,7 +1653,7 @@ foreach ($_SESSION['panier'] as $item) {
                 <div class="col-md-10">
                   <div class="card-body p-0">
                     <h5>guaranteed savings</h5>
-                    <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipi elit.</p>
+                    <p class="card-text">Enjoy regular promotions, bundle discounts and loyalty rewards — better prices on the products you love.</p>
                   </div>
                 </div>
               </div>
@@ -1968,7 +1668,7 @@ foreach ($_SESSION['panier'] as $item) {
                 <div class="col-md-10">
                   <div class="card-body p-0">
                     <h5>Daily offers</h5>
-                    <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipi elit.</p>
+                    <p class="card-text">Check our daily curated deals for limited‑time discounts and exclusive Glow & Shine bundles — new offers every day.</p>
                   </div>
                 </div>
               </div>

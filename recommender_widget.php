@@ -19,15 +19,57 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Exit silently if user is not logged in
+// Debug logging helper
+$debug_enabled = isset($_GET['debug_recommender']) && $_GET['debug_recommender'] === '1';
+function debug_log($msg) {
+    global $debug_enabled;
+    if ($debug_enabled) {
+        error_log("[Recommender Widget] " . $msg);
+    }
+}
+
+// Define fallback rendering function early so it can be called
+function renderRecommenderFallback($message, $source = null) {
+    global $debug_enabled;
+    debug_log("Rendering fallback: {$message}");
+    ?>
+    <section class="py-5">
+      <div class="container-fluid">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="section-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+              <div>
+                <h3 class="mb-0">Produits recommandés pour vous</h3>
+                <div class="text-muted small">Suggestions personnalisées basées sur votre historique</div>
+              </div>
+              <?php if ($source !== null): ?>
+                <small class="text-muted mt-2 mt-md-0">(Source: <?php echo htmlspecialchars($source, ENT_QUOTES, 'UTF-8'); ?>)</small>
+              <?php endif; ?>
+            </div>
+            <div class="alert alert-warning" role="alert">
+              <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <?php
+}
+
+debug_log("Session Status: " . (isset($_SESSION['user_id']) ? "User ID: " . $_SESSION['user_id'] : "Not logged in"));
+
+// Exit gracefully if user is not logged in
 if (!isset($_SESSION['user_id'])) {
+    debug_log("User not logged in - rendering fallback");
+    renderRecommenderFallback('Connectez-vous pour voir vos recommandations personnalisées.', null);
     return;
 }
 
 // Configuration
+$user_id = intval($_SESSION['user_id']);
 $api_base_url = 'http://localhost:8000';
-$api_endpoint = '/recommend/' . intval($_SESSION['user_id']);
-$api_timeout = 3;
+$api_endpoint = '/recommend/' . $user_id;
+$api_timeout = 8;  // Increased from 3 to 8 seconds for better reliability
 $top_n = 10;
 
 // Query parameter for number of recommendations
@@ -41,6 +83,8 @@ try {
         throw new Exception('Failed to initialize cURL');
     }
     
+    debug_log("cURL initialized - requesting: {$api_url}");
+    
     // Configure cURL options
     curl_setopt($ch, CURLOPT_URL, $api_url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -52,6 +96,9 @@ try {
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curl_error = curl_error($ch);
+    $curl_errno = curl_errno($ch);
+    
+    debug_log("cURL Response: HTTP {$http_code}, errno={$curl_errno}");
     
     if (is_resource($ch) || (class_exists('CurlHandle') && $ch instanceof CurlHandle)) {
         curl_close($ch);
@@ -59,41 +106,70 @@ try {
     
     // Handle cURL errors
     if ($curl_error) {
+        debug_log("cURL Error: {$curl_error}");
         throw new Exception('cURL Error: ' . $curl_error);
     }
     
     if ($http_code !== 200) {
+        debug_log("HTTP Error {$http_code}: {$response}");
         throw new Exception('HTTP ' . $http_code . ' response');
     }
+    
+    if (empty($response)) {
+        debug_log("Empty response from API");
+        throw new Exception('Empty response from API');
+    }
+    
+    debug_log("Response length: " . strlen($response));
     
     // Decode JSON response
     $data = json_decode($response, true);
     
+    if ($data === null) {
+        debug_log("JSON decode failed: " . json_last_error_msg());
+        throw new Exception('Invalid JSON response: ' . json_last_error_msg());
+    }
+    
     if (!is_array($data) || !isset($data['recommendations'])) {
+        debug_log("Invalid response structure: " . print_r($data, true));
         throw new Exception('Invalid or missing recommendations in response');
     }
     
     $recommendations = $data['recommendations'];
+    debug_log("Got " . count($recommendations) . " recommendations");
     
-    // Exit silently if no recommendations
+    // Exit gracefully if no recommendations
     if (empty($recommendations) || !is_array($recommendations)) {
+        debug_log("No recommendations available");
+        renderRecommenderFallback('Aucune recommandation disponible pour le moment.', isset($data['source']) ? $data['source'] : null);
         return;
     }
     
     // Function to find product image with any extension (matching filtrage.php)
-    function findProductImage($productName) {
-        $imageDir = 'images/prod_images/';
-        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
-        
-        foreach ($allowedExtensions as $ext) {
-            $imagePath = $imageDir . $productName . '.' . $ext;
-            if (file_exists($imagePath)) {
-                return $imagePath;
+    if (!function_exists('findProductImage')) {
+        function findProductImage($productName, $imageUrl = '') {
+            $imageDir = 'images/prod_images/';
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
+            
+            if (!empty($imageUrl)) {
+                if (file_exists($imageUrl)) {
+                    return $imageUrl;
+                }
+                if (file_exists($imageDir . $imageUrl)) {
+                    return $imageDir . $imageUrl;
+                }
             }
+
+            foreach ($allowedExtensions as $ext) {
+                $imagePath = $imageDir . $productName . '.' . $ext;
+                if (file_exists($imagePath)) {
+                    return $imagePath;
+                }
+            }
+            
+            // Return default image if no product image found
+            return 'images/no-image.png';
         }
-        
-        // Return default image if no product image found
-        return 'images/no-image.png';
     }
     
     // HTML rendering - matching Trending Products section structure
@@ -103,10 +179,13 @@ try {
         <div class="row">
           <div class="col-md-12">
 
-            <div class="section-header d-flex justify-content-between align-items-center mb-4">
-              <h3 class="mb-0">Produits recommandés pour vous</h3>
+            <div class="section-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+              <div>
+                <h3 class="mb-0">Produits recommandés pour vous</h3>
+                <div class="text-muted small">Suggestions personnalisées basées sur votre historique</div>
+              </div>
               <?php if (isset($data['source'])): ?>
-                <small class="text-muted">
+                <small class="text-muted mt-2 mt-md-0">
                   (Source: <?php echo htmlspecialchars($data['source'], ENT_QUOTES, 'UTF-8'); ?>)
                 </small>
               <?php endif; ?>
@@ -121,7 +200,7 @@ try {
                   $product_nom = isset($product['nom']) ? htmlspecialchars($product['nom'], ENT_QUOTES, 'UTF-8') : 'Unknown Product';
                   $product_prix = isset($product['prix']) ? floatval($product['prix']) : 0;
                   $product_nom_plain = isset($product['nom']) ? $product['nom'] : ''; // For findProductImage
-                  $product_image_url = findProductImage($product_nom_plain);
+                  $product_image_url = findProductImage($product_nom_plain, isset($product['image_url']) ? $product['image_url'] : '');
                   $product_categorie = isset($product['categorie']) ? htmlspecialchars($product['categorie'], ENT_QUOTES, 'UTF-8') : '';
                   $product_sous_categorie = isset($product['sous_categorie']) ? htmlspecialchars($product['sous_categorie'], ENT_QUOTES, 'UTF-8') : '';
                   $product_marque = isset($product['marque']) ? htmlspecialchars($product['marque'], ENT_QUOTES, 'UTF-8') : '';
@@ -192,8 +271,12 @@ try {
     <?php
 
 } catch (Exception $e) {
-    // Silently fail - log error if needed but never break the page
-    // In production, you could log this to a file:
-    // error_log('Recommender widget error: ' . $e->getMessage());
-    return;
+    debug_log("Exception caught: " . $e->getMessage());
+    // Render a fallback section instead of failing silently.
+    // This ensures the user sees the recommendation area even when the API is unavailable.
+    $error_msg = 'Impossible de charger les recommandations pour le moment. Réessayez plus tard.';
+    if ($debug_enabled) {
+        $error_msg .= ' [Debug: ' . $e->getMessage() . ']';
+    }
+    renderRecommenderFallback($error_msg, null);
 }

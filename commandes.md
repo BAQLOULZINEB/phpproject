@@ -25,7 +25,12 @@ Copyright: 2015-2026 MinIO, Inc.
 
 
  training pahse 3 
- .\venv\Scripts\activate        
+
+
+
+ .\venv\Scripts\activate  
+
+
 (venv) PS C:\xampp\htdocs\Glow-E.web .1.0.1> python recommender/train_als.py
 
 PAHSE4 fastAPI
@@ -105,3 +110,4 @@ Run the Streamlit dashboard:
 # in streamlit
 streamlit run recommender/dashboard_app.py
 
+.\venv\Scripts\activate 

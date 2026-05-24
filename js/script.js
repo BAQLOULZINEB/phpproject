@@ -64,20 +64,23 @@
       }
     });
 
-    new Swiper('.products-carousel', {
-      slidesPerView: 5,
-      spaceBetween: 30,
-      speed: 500,
-      navigation: {
-        nextEl: '.products-carousel-next',
-        prevEl: '.products-carousel-prev',
-      },
-      breakpoints: {
-        0: { slidesPerView: 1 },
-        768: { slidesPerView: 3 },
-        991: { slidesPerView: 4 },
-        1500: { slidesPerView: 6 },
-      }
+    document.querySelectorAll('.products-carousel').forEach(function(swiperEl) {
+      var section = swiperEl.closest('section');
+      new Swiper(swiperEl, {
+        slidesPerView: 5,
+        spaceBetween: 30,
+        speed: 500,
+        navigation: {
+          nextEl: section ? section.querySelector('.products-carousel-next') : null,
+          prevEl: section ? section.querySelector('.products-carousel-prev') : null,
+        },
+        breakpoints: {
+          0: { slidesPerView: 1 },
+          768: { slidesPerView: 3 },
+          991: { slidesPerView: 4 },
+          1500: { slidesPerView: 6 },
+        }
+      });
     });
   }
 

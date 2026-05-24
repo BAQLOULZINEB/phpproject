@@ -17,7 +17,14 @@ foreach ($_SESSION['panier'] as $item) {
 $conn = connectMaBasi();
 
 // Function to find product image with any extension
-function findProductImage($productName) {
+function findProductImage($productName, $imageUrl = '') {
+    if (!empty($imageUrl)) {
+        $absoluteUrl = __DIR__ . '/' . $imageUrl;
+        if (file_exists($absoluteUrl)) {
+            return $imageUrl;
+        }
+    }
+
     $imageDir = 'images/prod_images/';
     $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
     
@@ -28,7 +35,6 @@ function findProductImage($productName) {
         }
     }
     
-    // Return default image if no product image found
     return 'images/no-image.png';
 }
 
@@ -479,7 +485,7 @@ $result = $conn->query($sql);
                     <!-- Example badge, you can add logic for discounts if you add a badge field -->
                     <a href="#" class="btn-wishlist"><svg width="24" height="24"><use xlink:href="#heart"></use></svg></a>
                     <figure>
-                      <img src="<?php echo findProductImage($row['name']); ?>" class="tab-image" alt="<?php echo htmlspecialchars($row['name']); ?>">
+                      <img src="<?php echo findProductImage($row['name'], isset($row['image_url']) ? $row['image_url'] : ''); ?>" class="tab-image" alt="<?php echo htmlspecialchars($row['name']); ?>">
                     </figure>
                     <h3><?php echo htmlspecialchars($row['name']); ?></h3>
                     <span class="qty"><?php echo htmlspecialchars($row['brand']); ?> | <?php echo htmlspecialchars($row['subcategory']); ?></span>

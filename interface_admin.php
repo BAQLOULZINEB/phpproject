@@ -9,10 +9,108 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 }
 
 $basi = connectMaBasi();
+ensureProductsCreatedAt($basi);
 
 // Initialisation des variables pour le formulaire de modification
 $edit_product = null;
 $edit_client = null;
+
+function ensureProductsCreatedAt($conn) {
+    $result = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'created_at'");
+    if ($result && mysqli_num_rows($result) === 0) {
+        mysqli_query($conn, "ALTER TABLE products ADD created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+    }
+}
+
+function sanitizeFileName($fileName) {
+    $fileName = preg_replace('/[^\pL\pN\s\-_\.]/u', '', $fileName);
+    $fileName = preg_replace('/[\s]+/u', ' ', $fileName);
+    $fileName = trim($fileName, ' _-.');
+    return $fileName;
+}
+
+function fileExistsRelative($relativePath) {
+    return file_exists(__DIR__ . '/' . $relativePath);
+}
+
+function tryImageCandidates($productName, $directories, $extensions) {
+    foreach ($directories as $directory) {
+        foreach ($extensions as $ext) {
+            $candidate = $directory . $productName . '.' . $ext;
+            if (fileExistsRelative($candidate)) {
+                return $candidate;
+            }
+        }
+    }
+    return '';
+}
+
+function getProductImageSrc($product) {
+    if (!empty($product['image_url']) && fileExistsRelative($product['image_url'])) {
+        return $product['image_url'];
+    }
+
+    $rawName = $product['name'];
+    $sanitizedName = sanitizeFileName($rawName);
+    $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
+    $candidates = [
+        'images/prod_images/',
+        'images/',
+    ];
+
+    // First try raw product name
+    $rawImage = tryImageCandidates($rawName, $candidates, $allowedExtensions);
+    if (!empty($rawImage)) {
+        return $rawImage;
+    }
+
+    // Then try sanitized product name
+    $sanitizedImage = tryImageCandidates($sanitizedName, $candidates, $allowedExtensions);
+    if (!empty($sanitizedImage)) {
+        return $sanitizedImage;
+    }
+
+    // Fallback placeholder that exists in the repo
+    return 'images/product-thumb-1.png';
+}
+
+function handleProductImageUpload($file, $productName) {
+    if (empty($file['name']) || $file['error'] !== UPLOAD_ERR_OK) {
+        return '';
+    }
+
+    $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
+    $originalName = basename($file['name']);
+    $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowedExtensions, true)) {
+        return '';
+    }
+
+    $uploadDir = __DIR__ . '/images/prod_images/';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    $baseName = sanitizeFileName($productName);
+    if (empty($baseName)) {
+        $baseName = 'product';
+    }
+
+    $fileName = $baseName . '.' . $ext;
+    $targetPath = $uploadDir . $fileName;
+    $count = 1;
+    while (file_exists($targetPath)) {
+        $fileName = $baseName . '-' . $count . '.' . $ext;
+        $targetPath = $uploadDir . $fileName;
+        $count++;
+    }
+
+    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        return 'images/prod_images/' . $fileName;
+    }
+
+    return '';
+}
 
 // Gestion des produits
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -22,9 +120,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $description = mysqli_real_escape_string($basi, $_POST['description']);
         $price = floatval($_POST['price']);
         $category = mysqli_real_escape_string($basi, $_POST['category']);
+        $subcategory = mysqli_real_escape_string($basi, $_POST['subcategory']);
+        $brand = mysqli_real_escape_string($basi, $_POST['brand']);
+        $image_url = '';
 
-        $query = "INSERT INTO products (name, description, price, category) 
-                  VALUES ('$name', '$description', $price, '$category')";
+        if (isset($_FILES['product_image'])) {
+            $image_url = handleProductImageUpload($_FILES['product_image'], $name);
+            $image_url = mysqli_real_escape_string($basi, $image_url);
+        }
+
+        $query = "INSERT INTO products (name, description, price, category, subcategory, brand, image_url) 
+                  VALUES ('$name', '$description', $price, '$category', '$subcategory', '$brand', '$image_url')";
         mysqli_query($basi, $query);
         header("Location: interface_admin.php");
         exit();
@@ -54,10 +160,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $description = mysqli_real_escape_string($basi, $_POST['description']);
         $price = floatval($_POST['price']);
         $category = mysqli_real_escape_string($basi, $_POST['category']);
+        $subcategory = mysqli_real_escape_string($basi, $_POST['subcategory']);
+        $brand = mysqli_real_escape_string($basi, $_POST['brand']);
+        $image_sql = '';
+
+        if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] === UPLOAD_ERR_OK) {
+            $uploadedImage = handleProductImageUpload($_FILES['product_image'], $name);
+            if (!empty($uploadedImage)) {
+                $uploadedImage = mysqli_real_escape_string($basi, $uploadedImage);
+                $image_sql = ", image_url = '$uploadedImage'";
+            }
+        }
 
         $query = "UPDATE products SET 
                   name = '$name', description = '$description', price = $price, 
-                  category = '$category' 
+                  category = '$category', subcategory = '$subcategory', brand = '$brand' $image_sql 
                   WHERE id = $product_id";
         mysqli_query($basi, $query);
         header("Location: interface_admin.php");
@@ -95,8 +212,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Récupérer les produits
-$query_products = "SELECT * FROM products";
+// Récupérer les valeurs existantes pour les listes éditables
+$categories = [];
+$subcategories = [];
+$brands = [];
+$category_result = mysqli_query($basi, "SELECT DISTINCT category FROM products WHERE category != '' ORDER BY category ASC");
+$subcategory_result = mysqli_query($basi, "SELECT DISTINCT subcategory FROM products WHERE subcategory != '' ORDER BY subcategory ASC");
+$brand_result = mysqli_query($basi, "SELECT DISTINCT brand FROM products WHERE brand != '' ORDER BY brand ASC");
+while ($row = mysqli_fetch_assoc($category_result)) {
+    $categories[] = $row['category'];
+}
+while ($row = mysqli_fetch_assoc($subcategory_result)) {
+    $subcategories[] = $row['subcategory'];
+}
+while ($row = mysqli_fetch_assoc($brand_result)) {
+    $brands[] = $row['brand'];
+}
+
+$selected_category = isset($_GET['filter_category']) ? mysqli_real_escape_string($basi, $_GET['filter_category']) : '';
+$selected_brand = isset($_GET['filter_brand']) ? mysqli_real_escape_string($basi, $_GET['filter_brand']) : '';
+
+$filter_sql = '';
+if (!empty($selected_category) && $selected_category !== 'all') {
+    $filter_sql .= " AND category = '$selected_category'";
+}
+if (!empty($selected_brand) && $selected_brand !== 'all') {
+    $filter_sql .= " AND brand = '$selected_brand'";
+}
+
+// Récupérer les produits, triés par date d'ajout la plus récente
+$query_products = "SELECT * FROM products WHERE 1=1" . $filter_sql . " ORDER BY created_at DESC, id DESC";
 $result_products = mysqli_query($basi, $query_products);
 
 // Récupérer les clients
@@ -120,28 +265,42 @@ $result_clients = mysqli_query($basi, $query_clients);
         <h2>Gestion des Produits</h2>
         <?php if ($edit_product): ?>
             <!-- Formulaire de modification d'un produit -->
-            <form action="" method="POST" class="mb-4">
+            <form action="" method="POST" enctype="multipart/form-data" class="mb-4">
                 <input type="hidden" name="product_id" value="<?php echo $edit_product['id']; ?>">
-                <div class="row">
+                <div class="row g-3">
                     <div class="col-md-3">
-                        <input type="text" name="name" class="form-control" value="<?php echo $edit_product['name']; ?>" required>
+                        <input type="text" name="name" class="form-control" value="<?php echo htmlspecialchars($edit_product['name']); ?>" required>
                     </div>
                     <div class="col-md-4">
-                        <input type="text" name="description" class="form-control" value="<?php echo $edit_product['description']; ?>" required>
+                        <input type="text" name="description" class="form-control" value="<?php echo htmlspecialchars($edit_product['description']); ?>" required>
                     </div>
                     <div class="col-md-2">
-                        <input type="number" step="0.01" name="price" class="form-control" value="<?php echo $edit_product['price']; ?>" required>
+                        <input type="number" step="0.01" name="price" class="form-control" value="<?php echo htmlspecialchars($edit_product['price']); ?>" required>
                     </div>
                     <div class="col-md-3">
-                        <input type="text" name="category" class="form-control" value="<?php echo $edit_product['category']; ?>" required>
+                        <input list="category-options" type="text" name="category" class="form-control" value="<?php echo htmlspecialchars($edit_product['category']); ?>" required>
                     </div>
+                    <div class="col-md-3">
+                        <input list="subcategory-options" type="text" name="subcategory" class="form-control" value="<?php echo htmlspecialchars($edit_product['subcategory']); ?>" placeholder="Sous-catégorie" required>
+                    </div>
+                    <div class="col-md-3">
+                        <input list="brand-options" type="text" name="brand" class="form-control" value="<?php echo htmlspecialchars($edit_product['brand']); ?>" placeholder="Marque" required>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="file" name="product_image" class="form-control" accept="image/*">
+                    </div>
+                    <?php if (!empty($edit_product['image_url']) || !empty($edit_product['name'])): ?>
+                        <div class="col-12">
+                            <img src="<?php echo htmlspecialchars(getProductImageSrc($edit_product)); ?>" alt="Image actuelle" class="img-fluid" style="max-height:120px;">
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <button type="submit" name="update_product" class="btn btn-warning mt-3">Modifier le produit</button>
             </form>
         <?php else: ?>
             <!-- Formulaire d'ajout d'un produit -->
-            <form action="" method="POST" class="mb-4">
-                <div class="row">
+            <form action="" method="POST" enctype="multipart/form-data" class="mb-4">
+                <div class="row g-3">
                     <div class="col-md-3">
                         <input type="text" name="name" class="form-control" placeholder="Nom" required>
                     </div>
@@ -152,21 +311,72 @@ $result_clients = mysqli_query($basi, $query_clients);
                         <input type="number" step="0.01" name="price" class="form-control" placeholder="Prix" required>
                     </div>
                     <div class="col-md-3">
-                        <input type="text" name="category" class="form-control" placeholder="Catégorie" required>
+                        <input list="category-options" type="text" name="category" class="form-control" placeholder="Catégorie" required>
+                        <datalist id="category-options">
+                            <?php foreach ($categories as $option): ?>
+                                <option value="<?php echo htmlspecialchars($option); ?>"></option>
+                            <?php endforeach; ?>
+                        </datalist>
+                    </div>
+                    <div class="col-md-3">
+                        <input list="subcategory-options" type="text" name="subcategory" class="form-control" placeholder="Sous-catégorie" required>
+                        <datalist id="subcategory-options">
+                            <?php foreach ($subcategories as $option): ?>
+                                <option value="<?php echo htmlspecialchars($option); ?>"></option>
+                            <?php endforeach; ?>
+                        </datalist>
+                    </div>
+                    <div class="col-md-3">
+                        <input list="brand-options" type="text" name="brand" class="form-control" placeholder="Marque" required>
+                        <datalist id="brand-options">
+                            <?php foreach ($brands as $option): ?>
+                                <option value="<?php echo htmlspecialchars($option); ?>"></option>
+                            <?php endforeach; ?>
+                        </datalist>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="file" name="product_image" class="form-control" accept="image/*">
                     </div>
                 </div>
                 <button type="submit" name="add_product" class="btn btn-success mt-3">Ajouter le produit</button>
             </form>
         <?php endif; ?>
 
+        <form action="" method="GET" class="row g-3 align-items-end mb-4">
+            <div class="col-md-3">
+                <label class="form-label">Filtrer par catégorie</label>
+                <select name="filter_category" class="form-select">
+                    <option value="all">Toutes les catégories</option>
+                    <?php foreach ($categories as $option): ?>
+                        <option value="<?php echo htmlspecialchars($option); ?>" <?php echo ($selected_category === $option) ? 'selected' : ''; ?>><?php echo htmlspecialchars($option); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Filtrer par marque</label>
+                <select name="filter_brand" class="form-select">
+                    <option value="all">Toutes les marques</option>
+                    <?php foreach ($brands as $option): ?>
+                        <option value="<?php echo htmlspecialchars($option); ?>" <?php echo ($selected_brand === $option) ? 'selected' : ''; ?>><?php echo htmlspecialchars($option); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary">Appliquer le filtre</button>
+                <a href="interface_admin.php" class="btn btn-outline-secondary ms-2">Réinitialiser</a>
+            </div>
+        </form>
+
         <table class="table table-bordered">
             <thead class="table-dark">
                 <tr>
                     <th>ID</th>
+                    <th>Image</th>
                     <th>Nom</th>
                     <th>Description</th>
                     <th>Prix</th>
                     <th>Catégorie</th>
+                    <th>Dernièr arrivé</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -174,10 +384,14 @@ $result_clients = mysqli_query($basi, $query_clients);
                 <?php while ($product = mysqli_fetch_assoc($result_products)): ?>
                     <tr>
                         <td><?php echo $product['id']; ?></td>
+                        <td>
+                            <img src="<?php echo htmlspecialchars(getProductImageSrc($product)); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" style="max-height:50px;">
+                        </td>
                         <td><?php echo $product['name']; ?></td>
                         <td><?php echo $product['description']; ?></td>
                         <td><?php echo $product['price']; ?></td>
                         <td><?php echo $product['category']; ?></td>
+                        <td><?php echo !empty($product['created_at']) ? $product['created_at'] : '-'; ?></td>
                         <td>
                             <form action="" method="POST" class="d-inline">
                                 <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
