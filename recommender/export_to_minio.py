@@ -5,6 +5,7 @@ and uploads them to the configured MinIO bucket.
 """
 
 from pathlib import Path
+import re
 import sys
 import traceback
 
@@ -96,6 +97,27 @@ def build_events_df(orders_df: pd.DataFrame) -> pd.DataFrame:
     return events
 
 
+def _normalize_name_key(value: str) -> str:
+    if not value or not isinstance(value, str):
+        return ""
+    return re.sub(r"[^a-z0-9]", "", value.lower())
+
+
+def _resolve_local_image_url(product_name: str) -> str:
+    if not product_name or not isinstance(product_name, str):
+        return ""
+    image_dir = BASE_DIR.parent / "images" / "prod_images"
+    sanitized = _normalize_name_key(product_name)
+    if not image_dir.exists():
+        return ""
+    for candidate in image_dir.iterdir():
+        if not candidate.is_file():
+            continue
+        if _normalize_name_key(candidate.stem) == sanitized:
+            return str(Path("images") / "prod_images" / candidate.name)
+    return ""
+
+
 def build_item_props_df(products_df: pd.DataFrame) -> pd.DataFrame:
     if products_df.empty:
         return pd.DataFrame(columns=["item_id", "name", "category", "subcategory", "brand", "price", "image_url"])
@@ -112,6 +134,16 @@ def build_item_props_df(products_df: pd.DataFrame) -> pd.DataFrame:
     })
     items = items[["item_id", "name", "category", "subcategory", "brand", "price", "image_url"]]
     items = items.dropna(subset=["item_id", "price"]) 
+    if "image_url" not in items.columns:
+        items["image_url"] = ""
+    else:
+        items["image_url"] = items["image_url"].fillna("")
+
+    for idx, row in items.iterrows():
+        if not str(row["image_url"]).strip():
+            local_path = _resolve_local_image_url(row["name"])
+            if local_path:
+                items.at[idx, "image_url"] = local_path
 
     print(f"Item properties: {len(items)} products (sample 5):")
     print(items.head(5).to_dict(orient="records"))

@@ -40,7 +40,7 @@ function renderRecommenderFallback($message, $source = null) {
             <div class="section-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
               <div>
                 <h3 class="mb-0">Produits recommandés pour vous</h3>
-                <div class="text-muted small">Suggestions personnalisées basées sur votre historique</div>
+
               </div>
               <?php if ($source !== null): ?>
                 <small class="text-muted mt-2 mt-md-0">(Source: <?php echo htmlspecialchars($source, ENT_QUOTES, 'UTF-8'); ?>)</small>

@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import List
+import io
 
 import pandas as pd
 import pymysql
@@ -10,9 +11,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+from minio import Minio
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import MYSQL_HOST, MYSQL_DB, MYSQL_USER, MYSQL_PASSWORD, API_PORT, MINIO_BUCKET
+from config import (
+    MYSQL_HOST, MYSQL_DB, MYSQL_USER, MYSQL_PASSWORD, API_PORT, MINIO_BUCKET,
+    MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY
+)
 
 
 class ProductRecommendation(BaseModel):
@@ -67,15 +72,45 @@ def debug_print_products_schema():
 
 
 def load_recommendations():
-    recs_path = Path(__file__).resolve().parent.parent / "data" / "user_recs.parquet"
-    if not recs_path.exists():
-        print(f"WARNING: user_recs.parquet not found at {recs_path}")
-        print("user_recommendations will be empty.")
-        return
+    """Load recommendations from MinIO, fallback to local file if not available."""
+    try:
+        # Try to load from MinIO first
+        client = Minio(
+            MINIO_ENDPOINT,
+            access_key=MINIO_ACCESS_KEY,
+            secret_key=MINIO_SECRET_KEY,
+            secure=False,
+        )
+        
+        print(f"  Attempting to load user_recs.parquet from MinIO: {MINIO_ENDPOINT}/{MINIO_BUCKET}")
+        
+        try:
+            response = client.get_object(MINIO_BUCKET, "user_recs.parquet")
+            parquet_data = io.BytesIO(response.read())
+            df = pd.read_parquet(parquet_data, engine="pyarrow")
+            print(f"  ✓ Successfully loaded user_recs.parquet from MinIO")
+            print(f"  DataFrame shape: {df.shape} rows (columns: {list(df.columns)})")
+            print(f"  Distinct user_ids: {df['user_id'].nunique()}")
+        except Exception as e:
+            print(f"  ✗ Could not load from MinIO: {e}")
+            print(f"  Falling back to local file...")
+            raise
+    except Exception as minio_error:
+        # Fallback to local file
+        try:
+            recs_path = Path(__file__).resolve().parent.parent / "data" / "user_recs.parquet"
+            if not recs_path.exists():
+                print(f"  WARNING: user_recs.parquet not found at {recs_path}")
+                print("  user_recommendations will be empty.")
+                return
 
-    df = pd.read_parquet(str(recs_path), engine="pyarrow")
-    print(f"  DataFrame shape: {df.shape} rows (columns: {list(df.columns)})")
-    print(f"  Distinct user_ids in DataFrame: {df['user_id'].nunique()}")
+            df = pd.read_parquet(str(recs_path), engine="pyarrow")
+            print(f"  ✓ Loaded user_recs.parquet from local file: {recs_path}")
+            print(f"  DataFrame shape: {df.shape} rows (columns: {list(df.columns)})")
+            print(f"  Distinct user_ids: {df['user_id'].nunique()}")
+        except Exception as local_error:
+            print(f"  ERROR: Could not load recommendations from MinIO or local file: {local_error}")
+            return
     
     # Keep pred_rating information to enable re-ranking
     df = df.sort_values(["user_id", "pred_rating"], ascending=[True, False])
@@ -88,7 +123,7 @@ def load_recommendations():
         ]
 
     all_user_ids = sorted(list(user_recommendations.keys()))
-    print(f"Loaded {len(user_recommendations)} users with recommendations.")
+    print(f"  Loaded {len(user_recommendations)} users with recommendations.")
     print(f"  User IDs: {all_user_ids[:10]}" + (" ..." if len(all_user_ids) > 10 else ""))
     print(f"  Data types: user_id={type(all_user_ids[0]) if all_user_ids else 'N/A'}")
 
@@ -269,23 +304,78 @@ async def lifespan(app: FastAPI):
     load_product_catalog()
 
     # Load local item properties and user interactions to support light re-ranking
+    # Try MinIO first, then fallback to local files
+    client = None
     try:
-        items_path = Path(__file__).resolve().parent.parent / "data" / "item_properties.csv"
-        events_path = Path(__file__).resolve().parent.parent / "data" / "events.csv"
-        if items_path.exists():
-            ip = pd.read_csv(str(items_path))
+        client = Minio(
+            MINIO_ENDPOINT,
+            access_key=MINIO_ACCESS_KEY,
+            secret_key=MINIO_SECRET_KEY,
+            secure=False,
+        )
+    except Exception as e:
+        print(f"Could not initialize MinIO client for re-ranking data: {e}")
+    
+    try:
+        # Try to load item_properties from MinIO
+        if client:
+            try:
+                response = client.get_object(MINIO_BUCKET, "item_properties.csv")
+                csv_data = io.BytesIO(response.read())
+                ip = pd.read_csv(csv_data)
+                print(f"  ✓ Loaded item_properties.csv from MinIO ({len(ip)} items)")
+            except Exception as e:
+                print(f"  Could not load item_properties from MinIO: {e}, trying local...")
+                items_path = Path(__file__).resolve().parent.parent / "data" / "item_properties.csv"
+                if items_path.exists():
+                    ip = pd.read_csv(str(items_path))
+                    print(f"  ✓ Loaded item_properties.csv from local file ({len(ip)} items)")
+                else:
+                    ip = None
+        else:
+            items_path = Path(__file__).resolve().parent.parent / "data" / "item_properties.csv"
+            if items_path.exists():
+                ip = pd.read_csv(str(items_path))
+                print(f"  ✓ Loaded item_properties.csv from local file ({len(ip)} items)")
+            else:
+                ip = None
+        
+        if ip is not None:
             item_categories.clear()
             for _, row in ip.iterrows():
                 try:
                     item_categories[int(row['item_id'])] = row.get('category', '')
                 except Exception:
                     continue
-            print(f"Loaded {len(item_categories)} item categories from {items_path}")
-        else:
-            print(f"Item properties file not found at {items_path}; skipping local item metadata load.")
+            print(f"  Loaded {len(item_categories)} item categories")
+    except Exception as e:
+        print(f"Could not load item properties: {e}")
 
-        if events_path.exists():
-            ev = pd.read_csv(str(events_path))
+    try:
+        # Try to load events from MinIO
+        if client:
+            try:
+                response = client.get_object(MINIO_BUCKET, "events.csv")
+                csv_data = io.BytesIO(response.read())
+                ev = pd.read_csv(csv_data)
+                print(f"  ✓ Loaded events.csv from MinIO ({len(ev)} events)")
+            except Exception as e:
+                print(f"  Could not load events from MinIO: {e}, trying local...")
+                events_path = Path(__file__).resolve().parent.parent / "data" / "events.csv"
+                if events_path.exists():
+                    ev = pd.read_csv(str(events_path))
+                    print(f"  ✓ Loaded events.csv from local file ({len(ev)} events)")
+                else:
+                    ev = None
+        else:
+            events_path = Path(__file__).resolve().parent.parent / "data" / "events.csv"
+            if events_path.exists():
+                ev = pd.read_csv(str(events_path))
+                print(f"  ✓ Loaded events.csv from local file ({len(ev)} events)")
+            else:
+                ev = None
+        
+        if ev is not None:
             user_interactions.clear()
             if 'user_id' in ev.columns and 'item_id' in ev.columns:
                 for _, r in ev.iterrows():
@@ -298,11 +388,9 @@ async def lifespan(app: FastAPI):
             # convert sets to lists for JSON serializability
             for k in list(user_interactions.keys()):
                 user_interactions[k] = list(user_interactions[k])
-            print(f"Loaded interactions for {len(user_interactions)} users from {events_path}")
-        else:
-            print(f"Events file not found at {events_path}; skipping user interaction load.")
+            print(f"  Loaded interactions for {len(user_interactions)} users")
     except Exception as e:
-        print(f"Could not load local items/events for re-ranking: {e}")
+        print(f"Could not load events: {e}")
 
     # Self-test: verify both model and fallback paths work
     print("\n" + "="*60)

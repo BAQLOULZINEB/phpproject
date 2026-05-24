@@ -12,9 +12,23 @@ import requests
 import json
 import os
 import re
+import sys
 import time
+import base64
+import html
+import textwrap
+from io import BytesIO
 from datetime import datetime
 from pathlib import Path
+try:
+    from minio import Minio
+except ImportError:
+    Minio = None
+# Ensure the local recommender folder is on sys.path so config.py can be imported when running via streamlit.
+RECOMMENDER_DIR = Path(__file__).resolve().parent
+if str(RECOMMENDER_DIR) not in sys.path:
+    sys.path.insert(0, str(RECOMMENDER_DIR))
+from config import MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET
 
 # ============================================================
 # Page Config
@@ -344,6 +358,12 @@ html, body, [class*="css"] {
   overflow: hidden;
   border-bottom: 1px solid var(--border-subtle);
 }
+.rec-image-wrap img,
+.rec-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 .rec-image-placeholder {
   font-size: 2.5rem;
   opacity: 0.25;
@@ -610,17 +630,47 @@ PLOTLY_LAYOUT = dict(
 API_BASE_URL = "http://localhost:8000"
 
 # ============================================================
+# MinIO Helpers
+
+@st.cache_resource
+def _create_minio_client():
+    try:
+        return Minio(
+            MINIO_ENDPOINT,
+            access_key=MINIO_ACCESS_KEY,
+            secret_key=MINIO_SECRET_KEY,
+            secure=False,
+        )
+    except Exception:
+        return None
+
+@st.cache_data(show_spinner=False)
+def _load_csv_from_minio(object_name):
+    client = _create_minio_client()
+    if client is None:
+        return None
+    try:
+        response = client.get_object(MINIO_BUCKET, object_name)
+        data = response.read()
+        response.close()
+        response.release_conn()
+        return pd.read_csv(BytesIO(data))
+    except Exception:
+        return None
+
+# ============================================================
 # Data Helpers (Cached)
 # ============================================================
 
 @st.cache_data(show_spinner=False)
 def load_interactions():
-    for path in [
+    local_paths = [
         "recommender/data/events.csv",
         "data/events.csv",
         "recommender/data/processed/interactions.csv",
         "data/processed/interactions.csv",
-    ]:
+    ]
+    for path in local_paths:
         if os.path.exists(path):
             try:
                 df = pd.read_csv(path)
@@ -628,24 +678,52 @@ def load_interactions():
                     return df
             except Exception as e:
                 st.warning(f"Load error {path}: {e}")
+
+    df = _load_csv_from_minio("events.csv")
+    if df is not None and "user_id" in df.columns and "item_id" in df.columns:
+        return df
+
     return pd.DataFrame({"user_id": [], "item_id": [], "event_type": [], "timestamp": []})
+
+
+def _fill_missing_image_urls(df: pd.DataFrame) -> pd.DataFrame:
+    if "image_url" not in df.columns or df.empty:
+        return df
+
+    def resolve_image_url(row):
+        if pd.notna(row.get("image_url")) and str(row.get("image_url")).strip():
+            return str(row.get("image_url")).strip()
+        product_name = row.get("name") or row.get("nom")
+        if not product_name or not isinstance(product_name, str):
+            return ""
+        local = find_local_product_image(product_name)
+        return str(local) if local else ""
+
+    df["image_url"] = df.apply(resolve_image_url, axis=1)
+    return df
 
 
 @st.cache_data(show_spinner=False)
 def load_items():
-    for path in [
+    local_paths = [
         "recommender/data/item_properties.csv",
         "data/item_properties.csv",
         "recommender/data/products.csv",
         "data/products.csv",
-    ]:
+    ]
+    for path in local_paths:
         if os.path.exists(path):
             try:
                 df = pd.read_csv(path)
                 if "id" in df.columns or "item_id" in df.columns:
-                    return df
+                    return _fill_missing_image_urls(df)
             except Exception as e:
                 st.warning(f"Load error {path}: {e}")
+
+    df = _load_csv_from_minio("item_properties.csv")
+    if df is not None and ("id" in df.columns or "item_id" in df.columns):
+        return _fill_missing_image_urls(df)
+
     return pd.DataFrame({"id": [], "name": [], "category": [], "brand": [], "price": [], "image_url": []})
 
 
@@ -1207,6 +1285,39 @@ def render_recommendations_demo():
         st.error(f"Error: {e}")
 
 
+def _build_image_html(source):
+    if not source:
+        return '<div class="rec-image-placeholder">🖼</div>'
+
+    if isinstance(source, str) and source.startswith("http"):
+        return f'<img class="rec-image" src="{html.escape(source, quote=True)}" alt="Product image" />'
+
+    try:
+        p = Path(source)
+        if not p.is_absolute():
+            p = Path(__file__).resolve().parent.parent / source
+        if p.exists():
+            suffix = p.suffix.lower().lstrip('.')
+            mime = 'image/png'
+            if suffix in ['jpg', 'jpeg']:
+                mime = 'image/jpeg'
+            elif suffix == 'gif':
+                mime = 'image/gif'
+            elif suffix == 'webp':
+                mime = 'image/webp'
+            elif suffix == 'avif':
+                mime = 'image/avif'
+            elif suffix == 'svg':
+                mime = 'image/svg+xml'
+            with open(p, 'rb') as f:
+                data = base64.b64encode(f.read()).decode('utf-8')
+            return f'<img class="rec-image" src="data:{mime};base64,{data}" alt="Product image" />'
+    except Exception:
+        pass
+
+    return '<div class="rec-image-placeholder">🖼</div>'
+
+
 def _render_rec_card(rec, items_df):
     product_id   = rec.get("product_id") or rec.get("item_id") or rec.get("id") or rec.get("ID")
     product_name = rec.get("name") or rec.get("nom")
@@ -1239,52 +1350,42 @@ def _render_rec_card(rec, items_df):
         price        = price or row.get("price") or row.get("prix")
         image_url    = image_url or row.get("image_url") or row.get("img_url")
 
-    # Card markup
-    st.markdown('<div class="rec-card">', unsafe_allow_html=True)
-
-    # Image section
-    st.markdown('<div class="rec-image-wrap">', unsafe_allow_html=True)
-    displayed = False
-    if image_url:
-        displayed = render_image_from_path_or_url(image_url)
-    if not displayed and product_name:
+    if not image_url and product_name:
         local = find_local_product_image(product_name)
         if local:
-            displayed = render_image_from_path_or_url(local)
-    if not displayed:
-        st.markdown('<div class="rec-image-placeholder">🖼</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+            image_url = local
 
-    # Body
-    display_name = product_name or f"Product #{product_id}"
-    cat_text     = category or "—"
+    image_source = None
+    if isinstance(image_url, str) and image_url:
+        if image_url.startswith("http"):
+            image_source = image_url
+        else:
+            candidate = Path(image_url)
+            if not candidate.is_absolute():
+                candidate = Path(__file__).resolve().parent.parent / image_url
+            if candidate.exists():
+                image_source = str(candidate)
 
-    score_html = ""
-    if score is not None:
-        s = f"{score:.2f}" if isinstance(score, float) else str(score)
-        score_html = f'<span class="rec-score-badge">★ {s}</span>'
+    if image_source:
+        st.image(image_source, use_column_width=True)
+    else:
+        st.markdown("<div style='width:100%;height:220px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:2rem;border-radius:16px;'>🖼</div>", unsafe_allow_html=True)
 
-    price_html = ""
+    display_name = str(product_name or f"Product #{product_id}")
+    cat_text     = str(category or "—")
     if isinstance(price, (int, float)):
-        price_html = f'<span class="rec-price">${price:.2f}</span>'
-    elif price:
-        price_html = f'<span class="rec-price">{price}</span>'
+        price_text = f"${price:.2f}"
+    else:
+        price_text = str(price) if price else ""
+    score_text = f"★ {score:.2f}" if isinstance(score, float) else str(score) if score else ""
 
-    st.markdown(
-        f"""
-        <div class="rec-body">
-            <div class="rec-category">{cat_text}</div>
-            <div class="rec-name">{display_name}</div>
-            <div class="rec-meta-row">
-                {price_html}
-                {score_html}
-            </div>
-            <div class="rec-id" style="margin-top:0.3rem;">ID: {product_id}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
+    lines = [f"**{cat_text}**", f"### {display_name}"]
+    if price_text or score_text:
+        metric_line = "  ".join([part for part in [price_text, score_text] if part])
+        lines.append(metric_line)
+    lines.append(f"ID: {product_id}")
+
+    st.markdown("\n\n".join(lines))
 
 
 # ============================================================
