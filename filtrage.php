@@ -1,11 +1,4 @@
 <?php
-<<<<<<< HEAD
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "projects"; 
-//FONCTION pour donner a chaque produit son image 
-=======
 session_start();
 require_once 'connexionbd.php';
 
@@ -24,7 +17,6 @@ foreach ($_SESSION['panier'] as $item) {
 $conn = connectMaBasi();
 
 // Function to find product image with any extension
->>>>>>> a6c1004 (new update)
 function findProductImage($productName) {
     $imageDir = 'images/prod_images/';
     $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];

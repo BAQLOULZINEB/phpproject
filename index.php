@@ -337,7 +337,7 @@ foreach ($_SESSION['panier'] as $item) {
                 <button class="border-0 bg-transparent d-flex align-items-center gap-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
                   <svg width="24" height="24"><use xlink:href="#cart"></use></svg>
                   <span class="fs-6 text-muted">Your Cart</span>
-                  <span id="cart-count-badge" class="badge bg-danger rounded-pill"><?php echo $cartCount; ?></span>
+                  <span id="cart-count-badge" class="badge bg-success rounded-pill"><?php echo $cartCount; ?></span>
                 </button>
               </div>
             </div>
@@ -1181,6 +1181,8 @@ foreach ($_SESSION['panier'] as $item) {
         </div>
       </div>
     </section>
+
+    <?php include 'recommender_widget.php'; ?>
 
     <section class="py-5">
       <div class="container-fluid">

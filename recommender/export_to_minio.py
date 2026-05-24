@@ -1,80 +1,217 @@
-import csv
+"""Phase 1: Export MySQL -> CSV -> MinIO
+
+Writes `events.csv` and `item_properties.csv` to a local data directory
+and uploads them to the configured MinIO bucket.
+"""
+
 from pathlib import Path
+import sys
+import traceback
 
+import pandas as pd
 import pymysql
+from minio import Minio
 
-from config import MYSQL_HOST, MYSQL_DB, MYSQL_USER, MYSQL_PASSWORD
-from minio_client import get_minio_client, ensure_bucket
-
-TMP_DIR = Path('/tmp')
-TMP_DIR.mkdir(parents=True, exist_ok=True)
-
-events_path = TMP_DIR / 'events.csv'
-item_properties_path = TMP_DIR / 'item_properties.csv'
-
-print('Connecting to MySQL...')
-connection = pymysql.connect(
-    host=MYSQL_HOST,
-    user=MYSQL_USER,
-    password=MYSQL_PASSWORD,
-    database=MYSQL_DB,
-    cursorclass=pymysql.cursors.DictCursor,
+from config import (
+    MYSQL_HOST,
+    MYSQL_DB,
+    MYSQL_USER,
+    MYSQL_PASSWORD,
+    MINIO_ENDPOINT,
+    MINIO_ACCESS_KEY,
+    MINIO_SECRET_KEY,
+    MINIO_BUCKET,
 )
-print('Connected to MySQL.')
 
-with connection:
-    with connection.cursor() as cursor:
-        print('Querying purchase events...')
-        cursor.execute(
-            """
-            SELECT c.id_user AS user_id,
-                   lc.id_produit AS item_id,
-                   'purchase' AS event_type,
-                   UNIX_TIMESTAMP(c.date_commande) AS timestamp
-            FROM ligne_commande lc
-            JOIN commande c ON lc.id_commande = c.id_commande
-            """
+
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def get_connection():
+    try:
+        conn = pymysql.connect(
+            host=MYSQL_HOST,
+            user=MYSQL_USER,
+            password=MYSQL_PASSWORD,
+            database=MYSQL_DB,
+            cursorclass=pymysql.cursors.DictCursor,
+            autocommit=True,
         )
-        events = cursor.fetchall()
+        print("MySQL connection established.")
+        return conn
+    except Exception as e:
+        print("Failed to connect to MySQL:", str(e))
+        traceback.print_exc()
+        return None
 
-        print(f'Fetched {len(events)} purchase events.')
-        print(f'Writing {events_path}...')
-        with open(events_path, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=['user_id', 'item_id', 'event_type', 'timestamp'])
-            writer.writeheader()
-            writer.writerows(events)
-        print(f'Wrote {events_path}.')
 
-        print('Querying item properties...')
-        cursor.execute(
-            """
-            SELECT id AS item_id,
-                   categorie AS category,
-                   marque AS brand,
-                   prix AS price
-            FROM products
-            """
+def load_orders_and_users(conn):
+    query = (
+        "SELECT c.id_commande, c.id_client, c.date_commande, c.statut_commande,"
+        " lc.id_produit, lc.quantite, lc.prix_unitaire"
+        " FROM commande c JOIN ligne_commande lc ON c.id_commande = lc.id_commande"
+    )
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+        df = pd.DataFrame(rows)
+        print(f"Loaded {len(df)} order lines from database.")
+        return df
+    except Exception as e:
+        print("Failed to load orders:", str(e))
+        traceback.print_exc()
+        return pd.DataFrame()
+
+
+def load_products(conn):
+    query = "SELECT id, name, description, price, category, subcategory, brand, image_url FROM products"
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+        df = pd.DataFrame(rows)
+        print(f"Loaded {len(df)} products from database.")
+        return df
+    except Exception as e:
+        print("Failed to load products:", str(e))
+        traceback.print_exc()
+        return pd.DataFrame()
+
+
+def build_events_df(orders_df: pd.DataFrame) -> pd.DataFrame:
+    if orders_df.empty:
+        return pd.DataFrame(columns=["user_id", "item_id", "event_type", "timestamp"])
+
+    events = orders_df[["id_client", "id_produit", "date_commande"]].copy()
+    events = events.rename(columns={"id_client": "user_id", "id_produit": "item_id", "date_commande": "timestamp"})
+    events["timestamp"] = pd.to_datetime(events["timestamp"]).dt.strftime("%Y-%m-%d %H:%M:%S")
+    events["event_type"] = "purchase"
+    events = events[["user_id", "item_id", "event_type", "timestamp"]]
+    events = events.dropna(subset=["user_id", "item_id"]) 
+
+    print(f"Events: rows={len(events)}, distinct_users={events['user_id'].nunique()}, distinct_items={events['item_id'].nunique()}")
+    return events
+
+
+def build_item_props_df(products_df: pd.DataFrame) -> pd.DataFrame:
+    if products_df.empty:
+        return pd.DataFrame(columns=["item_id", "name", "category", "subcategory", "brand", "price", "image_url"])
+
+    items = products_df.copy()
+    items = items.rename(columns={
+        "id": "item_id",
+        "nom": "name",
+        "categorie": "category",
+        "sous_categorie": "subcategory",
+        "marque": "brand",
+        "prix": "price",
+        "image_url": "image_url",
+    })
+    items = items[["item_id", "name", "category", "subcategory", "brand", "price", "image_url"]]
+    items = items.dropna(subset=["item_id", "price"]) 
+
+    print(f"Item properties: {len(items)} products (sample 5):")
+    print(items.head(5).to_dict(orient="records"))
+    return items
+
+
+def save_csvs(events_df: pd.DataFrame, item_props_df: pd.DataFrame):
+    events_path = DATA_DIR / "events.csv"
+    items_path = DATA_DIR / "item_properties.csv"
+    events_df.to_csv(events_path, index=False, encoding="utf-8")
+    item_props_df.to_csv(items_path, index=False, encoding="utf-8")
+    print(f"Saved {events_path} ({len(events_df)} rows)")
+    print(f"Saved {items_path} ({len(item_props_df)} rows)")
+    return events_path, items_path
+
+
+def get_minio_client():
+    try:
+        client = Minio(
+            MINIO_ENDPOINT,
+            access_key=MINIO_ACCESS_KEY,
+            secret_key=MINIO_SECRET_KEY,
+            secure=False,
         )
-        items = cursor.fetchall()
+        print("MinIO client initialized.")
+        return client
+    except Exception as e:
+        print("Failed to initialize MinIO client:", str(e))
+        traceback.print_exc()
+        return None
 
-        print(f'Fetched {len(items)} item properties.')
-        print(f'Writing {item_properties_path}...')
-        with open(item_properties_path, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=['item_id', 'category', 'brand', 'price'])
-            writer.writeheader()
-            writer.writerows(items)
-        print(f'Wrote {item_properties_path}.')
 
-print('Initializing MinIO client...')
-minio_client = get_minio_client()
-print('Ensuring bucket exists...')
-bucket_name = ensure_bucket(minio_client)
-print(f'Bucket ready: {bucket_name}')
+def ensure_bucket_exists(client, bucket_name: str):
+    try:
+        if not client.bucket_exists(bucket_name):
+            client.make_bucket(bucket_name)
+            print(f"Created bucket: {bucket_name}")
+        else:
+            print(f"Bucket exists: {bucket_name}")
+        return True
+    except Exception as e:
+        print(f"Failed to ensure bucket {bucket_name}:", str(e))
+        traceback.print_exc()
+        return False
 
-for path in [events_path, item_properties_path]:
-    object_name = path.name
-    print(f'Uploading {object_name} to bucket {bucket_name}...')
-    minio_client.fput_object(bucket_name, object_name, str(path))
-    print(f'Uploaded {object_name}.')
 
-print('Export and upload complete.')
+def upload_file(client, bucket_name: str, path: Path, object_name: str):
+    try:
+        client.fput_object(bucket_name, object_name, str(path))
+        print(f"Uploaded {object_name} to bucket {bucket_name}.")
+        return True
+    except Exception as e:
+        print(f"Failed to upload {object_name}:", str(e))
+        traceback.print_exc()
+        return False
+
+
+def main():
+    conn = get_connection()
+    if conn is None:
+        print("Aborting: cannot connect to database.")
+        sys.exit(1)
+
+    try:
+        orders_df = load_orders_and_users(conn)
+        products_df = load_products(conn)
+
+        if orders_df.empty:
+            print("Warning: no orders found. Exiting.")
+            return
+        if products_df.empty:
+            print("Warning: no products found. Exiting.")
+            return
+
+        events_df = build_events_df(orders_df)
+        item_props_df = build_item_props_df(products_df)
+
+        events_path, items_path = save_csvs(events_df, item_props_df)
+
+        client = get_minio_client()
+        if client is None:
+            print("MinIO client unavailable. Skipping upload.")
+            return
+
+        ok = ensure_bucket_exists(client, MINIO_BUCKET)
+        if not ok:
+            print("Could not ensure bucket exists. Skipping upload.")
+            return
+
+        upload_file(client, MINIO_BUCKET, events_path, events_path.name)
+        upload_file(client, MINIO_BUCKET, items_path, items_path.name)
+
+        print("Export to MinIO completed successfully.")
+
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,888 @@
+﻿python.exe : WARNING: Using incubator modules: jdk.incubator.vector
+Au caractère Ligne:1 : 323
++ ... C:\hadoop'; & 'C:\xampp\htdocs\Glow-E.web .1.0.1\venv\Scripts\python. ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (WARNING: Using ...ncubator.vector 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+:: loading settings :: url = jar:file:/C:/xampp/htdocs/Glow-E.web%20.1.0.1/venv
+/Lib/site-packages/pyspark/jars/ivy-2.5.3.jar!/org/apache/ivy/core/settings/ivy
+settings.xml
+Ivy Default Cache set to: C:\Users\zineb\.ivy2.5.2\cache
+The jars for the packages stored in: C:\Users\zineb\.ivy2.5.2\jars
+org.apache.hadoop#hadoop-aws added as a dependency
+com.amazonaws#aws-java-sdk-bundle added as a dependency
+:: resolving dependencies :: 
+org.apache.spark#spark-submit-parent-87de29de-3f23-451d-9562-83bd2824b017;1.0
+	confs: [default]
+	found org.apache.hadoop#hadoop-aws;3.3.4 in central
+	found org.wildfly.openssl#wildfly-openssl;1.0.7.Final in central
+	found com.amazonaws#aws-java-sdk-bundle;1.12.509 in central
+:: resolution report :: resolve 1128ms :: artifacts dl 185ms
+	:: modules in use:
+	com.amazonaws#aws-java-sdk-bundle;1.12.509 from central in [default]
+	org.apache.hadoop#hadoop-aws;3.3.4 from central in [default]
+	org.wildfly.openssl#wildfly-openssl;1.0.7.Final from central in [default]
+	:: evicted modules:
+	com.amazonaws#aws-java-sdk-bundle;1.12.262 by 
+[com.amazonaws#aws-java-sdk-bundle;1.12.509] in [default]
+	---------------------------------------------------------------------
+	|                  |            modules            ||   artifacts   |
+	|       conf       | number| search|dwnlded|evicted|| number|dwnlded|
+	---------------------------------------------------------------------
+	|      default     |   4   |   0   |   0   |   1   ||   3   |   0   |
+	---------------------------------------------------------------------
+:: retrieving :: 
+org.apache.spark#spark-submit-parent-87de29de-3f23-451d-9562-83bd2824b017
+	confs: [default]
+	0 artifacts copied, 3 already retrieved (0kB/131ms)
+26/05/23 18:40:30 WARN NativeCodeLoader: Unable to load native-hadoop library 
+for your platform... using builtin-java classes where applicable
+Using Spark's default log4j profile: 
+org/apache/spark/log4j2-defaults.properties
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use 
+setLogLevel(newLevel).
+26/05/23 18:41:04 WARN FileSystem: Failed to initialize filesystem 
+s3a://ecommerce-data/events.csv: java.lang.NumberFormatException: For input 
+string: "60s"
+26/05/23 18:41:04 WARN FileStreamSink: Assume no metadata directory. Error 
+while looking for metadata directory in the path: 
+s3a://ecommerce-data/events.csv.
+java.lang.NumberFormatException: For input string: "60s"
+	at java.base/java.lang.NumberFormatException.forInputString(NumberFormatExcept
+ion.java:67)
+	at java.base/java.lang.Long.parseLong(Long.java:711)
+	at java.base/java.lang.Long.parseLong(Long.java:836)
+	at org.apache.hadoop.conf.Configuration.getLong(Configuration.java:1607)
+	at org.apache.hadoop.fs.s3a.S3AUtils.longOption(S3AUtils.java:1024)
+	at 
+org.apache.hadoop.fs.s3a.S3AFileSystem.initThreadPools(S3AFileSystem.java:719)
+	at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:498)
+	at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3615)
+	at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:172)
+	at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3716)
+	at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3667)
+	at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:557)
+	at org.apache.hadoop.fs.Path.getFileSystem(Path.java:366)
+	at org.apache.spark.sql.execution.streaming.sinks.FileStreamSink$.hasMetadata(
+FileStreamSink.scala:57)
+	at org.apache.spark.sql.execution.datasources.DataSource.resolveRelation(DataS
+ource.scala:384)
+	at org.apache.spark.sql.catalyst.analysis.ResolveDataSource.org$apache$spark$s
+ql$catalyst$analysis$ResolveDataSource$$loadV1BatchSource(ResolveDataSource.sca
+la:143)
+	at org.apache.spark.sql.catalyst.analysis.ResolveDataSource$$anonfun$apply$1.$
+anonfun$applyOrElse$2(ResolveDataSource.scala:61)
+	at scala.Option.getOrElse(Option.scala:201)
+	at org.apache.spark.sql.catalyst.analysis.ResolveDataSource$$anonfun$apply$1.a
+pplyOrElse(ResolveDataSource.scala:61)
+	at org.apache.spark.sql.catalyst.analysis.ResolveDataSource$$anonfun$apply$1.a
+pplyOrElse(ResolveDataSource.scala:45)
+	at org.apache.spark.sql.catalyst.plans.logical.AnalysisHelper.$anonfun$resolve
+OperatorsUpWithPruning$3(AnalysisHelper.scala:139)
+	at 
+org.apache.spark.sql.catalyst.trees.CurrentOrigin$.withOrigin(origin.scala:107)
+	at org.apache.spark.sql.catalyst.plans.logical.AnalysisHelper.$anonfun$resolve
+OperatorsUpWithPruning$1(AnalysisHelper.scala:139)
+	at org.apache.spark.sql.catalyst.plans.logical.AnalysisHelper$.allowInvokingTr
+ansformsInAnalyzer(AnalysisHelper.scala:416)
+	at org.apache.spark.sql.catalyst.plans.logical.AnalysisHelper.resolveOperators
+UpWithPruning(AnalysisHelper.scala:135)
+	at org.apache.spark.sql.catalyst.plans.logical.AnalysisHelper.resolveOperators
+UpWithPruning$(AnalysisHelper.scala:131)
+	at org.apache.spark.sql.catalyst.plans.logical.LogicalPlan.resolveOperatorsUpW
+ithPruning(LogicalPlan.scala:37)
+	at org.apache.spark.sql.catalyst.plans.logical.AnalysisHelper.resolveOperators
+Up(AnalysisHelper.scala:112)
+	at org.apache.spark.sql.catalyst.plans.logical.AnalysisHelper.resolveOperators
+Up$(AnalysisHelper.scala:111)
+	at org.apache.spark.sql.catalyst.plans.logical.LogicalPlan.resolveOperatorsUp(
+LogicalPlan.scala:37)
+	at org.apache.spark.sql.catalyst.analysis.ResolveDataSource.apply(ResolveDataS
+ource.scala:45)
+	at org.apache.spark.sql.catalyst.analysis.ResolveDataSource.apply(ResolveDataS
+ource.scala:43)
+	at org.apache.spark.sql.catalyst.rules.RuleExecutor.$anonfun$execute$2(RuleExe
+cutor.scala:248)
+	at scala.collection.LinearSeqOps.foldLeft(LinearSeq.scala:183)
+	at scala.collection.LinearSeqOps.foldLeft$(LinearSeq.scala:179)
+	at scala.collection.immutable.List.foldLeft(List.scala:79)
+	at org.apache.spark.sql.catalyst.rules.RuleExecutor.$anonfun$execute$1(RuleExe
+cutor.scala:245)
+	at org.apache.spark.sql.catalyst.rules.RuleExecutor.$anonfun$execute$1$adapted
+(RuleExecutor.scala:237)
+	at scala.collection.immutable.List.foreach(List.scala:323)
+	at org.apache.spark.sql.catalyst.rules.RuleExecutor.execute(RuleExecutor.scala
+:237)
+	at org.apache.spark.sql.catalyst.analysis.Analyzer.org$apache$spark$sql$cataly
+st$analysis$Analyzer$$executeSameContext(Analyzer.scala:343)
+	at org.apache.spark.sql.catalyst.analysis.Analyzer.$anonfun$execute$1(Analyzer
+.scala:339)
+	at org.apache.spark.sql.catalyst.analysis.AnalysisContext$.withNewAnalysisCont
+ext(Analyzer.scala:224)
+	at org.apache.spark.sql.catalyst.analysis.Analyzer.execute(Analyzer.scala:339)
+	at org.apache.spark.sql.catalyst.analysis.Analyzer.execute(Analyzer.scala:289)
+	at org.apache.spark.sql.catalyst.rules.RuleExecutor.$anonfun$executeAndTrack$1
+(RuleExecutor.scala:207)
+	at org.apache.spark.sql.catalyst.QueryPlanningTracker$.withTracker(QueryPlanni
+ngTracker.scala:89)
+	at org.apache.spark.sql.catalyst.rules.RuleExecutor.executeAndTrack(RuleExecut
+or.scala:207)
+	at org.apache.spark.sql.catalyst.analysis.resolver.HybridAnalyzer.resolveInFix
+edPoint(HybridAnalyzer.scala:236)
+	at org.apache.spark.sql.catalyst.analysis.resolver.HybridAnalyzer.$anonfun$app
+ly$1(HybridAnalyzer.scala:91)
+	at org.apache.spark.sql.catalyst.analysis.resolver.HybridAnalyzer.withTrackedA
+nalyzerBridgeState(HybridAnalyzer.scala:122)
+	at org.apache.spark.sql.catalyst.analysis.resolver.HybridAnalyzer.apply(Hybrid
+Analyzer.scala:84)
+	at org.apache.spark.sql.catalyst.analysis.Analyzer.$anonfun$executeAndCheck$1(
+Analyzer.scala:322)
+	at org.apache.spark.sql.catalyst.plans.logical.AnalysisHelper$.markInAnalyzer(
+AnalysisHelper.scala:423)
+	at org.apache.spark.sql.catalyst.analysis.Analyzer.executeAndCheck(Analyzer.sc
+ala:322)
+	at org.apache.spark.sql.execution.QueryExecution.$anonfun$lazyAnalyzed$2(Query
+Execution.scala:139)
+	at org.apache.spark.sql.catalyst.QueryPlanningTracker.measurePhase(QueryPlanni
+ngTracker.scala:148)
+	at org.apache.spark.sql.execution.QueryExecution.$anonfun$executePhase$2(Query
+Execution.scala:330)
+	at org.apache.spark.sql.execution.QueryExecution$.withInternalError(QueryExecu
+tion.scala:717)
+	at org.apache.spark.sql.execution.QueryExecution.$anonfun$executePhase$1(Query
+Execution.scala:330)
+	at org.apache.spark.sql.SparkSession.withActive(SparkSession.scala:804)
+	at org.apache.spark.sql.execution.QueryExecution.executePhase(QueryExecution.s
+cala:329)
+	at org.apache.spark.sql.execution.QueryExecution.$anonfun$lazyAnalyzed$1(Query
+Execution.scala:139)
+	at scala.util.Try$.apply(Try.scala:217)
+	at org.apache.spark.util.Utils$.doTryWithCallerStacktrace(Utils.scala:1392)
+	at org.apache.spark.util.LazyTry.tryT$lzycompute(LazyTry.scala:46)
+	at org.apache.spark.util.LazyTry.tryT(LazyTry.scala:46)
+	at org.apache.spark.util.LazyTry.get(LazyTry.scala:58)
+	at org.apache.spark.sql.execution.QueryExecution.analyzed(QueryExecution.scala
+:150)
+	at org.apache.spark.sql.execution.QueryExecution.assertAnalyzed(QueryExecution
+.scala:90)
+	at org.apache.spark.sql.classic.Dataset$.$anonfun$ofRows$1(Dataset.scala:114)
+	at org.apache.spark.sql.SparkSession.withActive(SparkSession.scala:804)
+	at org.apache.spark.sql.classic.Dataset$.ofRows(Dataset.scala:112)
+	at 
+org.apache.spark.sql.classic.DataFrameReader.load(DataFrameReader.scala:108)
+	at org.apache.spark.sql.classic.DataFrameReader.load(DataFrameReader.scala:57)
+	at org.apache.spark.sql.DataFrameReader.csv(DataFrameReader.scala:392)
+	at org.apache.spark.sql.classic.DataFrameReader.csv(DataFrameReader.scala:258)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native 
+Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethod
+AccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(Delegati
+ngMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)
+	at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)
+	at py4j.Gateway.invoke(Gateway.java:282)
+	at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)
+	at py4j.commands.CallCommand.execute(CallCommand.java:79)
+	at 
+py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)
+	at py4j.ClientServerConnection.run(ClientServerConnection.java:108)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+26/05/23 18:41:04 WARN FileSystem: Failed to initialize filesystem 
+s3a://ecommerce-data/events.csv: java.lang.NumberFormatException: For input 
+string: "60s"
+26/05/23 18:42:02 ERROR FileFormatWriter: Aborting job 
+8ed7c3c1-4806-46cc-b08f-36bf5e51bca9.
+java.lang.UnsatisfiedLinkError: 'boolean 
+org.apache.hadoop.io.nativeio.NativeIO$Windows.access0(java.lang.String, int)'
+	at org.apache.hadoop.io.nativeio.NativeIO$Windows.access0(Native Method)
+	at org.apache.hadoop.io.nativeio.NativeIO$Windows.access(NativeIO.java:817)
+	at org.apache.hadoop.fs.FileUtil.canRead(FileUtil.java:1415)
+	at org.apache.hadoop.fs.FileUtil.list(FileUtil.java:1620)
+	at 
+org.apache.hadoop.fs.RawLocalFileSystem.listStatus(RawLocalFileSystem.java:802)
+	at org.apache.hadoop.fs.FileSystem.listStatus(FileSystem.java:2078)
+	at org.apache.hadoop.fs.FileSystem.listStatus(FileSystem.java:2122)
+	at org.apache.hadoop.fs.ChecksumFileSystem.listStatus(ChecksumFileSystem.java:
+1020)
+	at org.apache.hadoop.fs.FileSystem.listStatus(FileSystem.java:2078)
+	at org.apache.hadoop.fs.FileSystem.listStatus(FileSystem.java:2122)
+	at org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.getAllCommittedT
+askPaths(FileOutputCommitter.java:334)
+	at org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.commitJobInterna
+l(FileOutputCommitter.java:404)
+	at org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.commitJob(FileOu
+tputCommitter.java:377)
+	at org.apache.parquet.hadoop.ParquetOutputCommitter.commitJob(ParquetOutputCom
+mitter.java:46)
+	at org.apache.spark.internal.io.HadoopMapReduceCommitProtocol.commitJob(Hadoop
+MapReduceCommitProtocol.scala:184)
+	at org.apache.spark.sql.execution.datasources.FileFormatWriter$.$anonfun$write
+AndCommit$3(FileFormatWriter.scala:275)
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+	at org.apache.spark.util.Utils$.timeTakenMs(Utils.scala:496)
+	at org.apache.spark.sql.execution.datasources.FileFormatWriter$.writeAndCommit
+(FileFormatWriter.scala:275)
+	at org.apache.spark.sql.execution.datasources.FileFormatWriter$.executeWrite(F
+ileFormatWriter.scala:306)
+	at org.apache.spark.sql.execution.datasources.FileFormatWriter$.write(FileForm
+atWriter.scala:189)
+	at org.apache.spark.sql.execution.datasources.InsertIntoHadoopFsRelationComman
+d.run(InsertIntoHadoopFsRelationCommand.scala:195)
+	at org.apache.spark.sql.execution.command.DataWritingCommandExec.sideEffectRes
+ult$lzycompute(commands.scala:117)
+	at org.apache.spark.sql.execution.command.DataWritingCommandExec.sideEffectRes
+ult(commands.scala:115)
+	at org.apache.spark.sql.execution.command.DataWritingCommandExec.executeCollec
+t(commands.scala:129)
+	at org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanExec.$anonfun$exec
+uteCollect$1(AdaptiveSparkPlanExec.scala:396)
+	at org.apache.spark.sql.execution.adaptive.ResultQueryStageExec.$anonfun$doMat
+erialize$1(QueryStageExec.scala:328)
+	at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withThreadLocalCaptur
+ed$4(SQLExecution.scala:335)
+	at org.apache.spark.sql.execution.SQLExecution$.withSessionTagsApplied(SQLExec
+ution.scala:285)
+	at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withThreadLocalCaptur
+ed$3(SQLExecution.scala:333)
+	at org.apache.spark.JobArtifactSet$.withActiveJobArtifactState(JobArtifactSet.
+scala:94)
+	at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withThreadLocalCaptur
+ed$2(SQLExecution.scala:329)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(Completabl
+eFuture.java:1768)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecu
+tor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExec
+utor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Traceback (most recent call last):
+  File "C:\xampp\htdocs\Glow-E.web .1.0.1\recommender\preprocessing.py", line 
+201, in main
+    interactions_df.write.mode("overwrite").parquet(str(local_parquet_dir))
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\xampp\htdocs\Glow-E.web 
+.1.0.1\venv\Lib\site-packages\pyspark\sql\readwriter.py", line 2003, in parquet
+    self._jwrite.parquet(path)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\xampp\htdocs\Glow-E.web 
+.1.0.1\venv\Lib\site-packages\py4j\java_gateway.py", line 1362, in __call__
+    return_value = get_return_value(
+        answer, self.gateway_client, self.target_id, self.name)
+  File "C:\xampp\htdocs\Glow-E.web 
+.1.0.1\venv\Lib\site-packages\pyspark\errors\exceptions\captured.py", line 
+263, in deco
+    return f(*a, **kw)
+  File "C:\xampp\htdocs\Glow-E.web 
+.1.0.1\venv\Lib\site-packages\py4j\protocol.py", line 327, in get_return_value
+    raise Py4JJavaError(
+        "An error occurred while calling {0}{1}{2}.\n".
+        format(target_id, ".", name), value)
+py4j.protocol.Py4JJavaError: An error occurred while calling o176.parquet.
+: java.util.concurrent.ExecutionException: Boxed Exception
+
+	at scala.concurrent.impl.Promise$.scala$concurrent$impl$Promise$$resolve(Promi
+se.scala:99)
+
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete(Promise.scala:288)
+
+	at scala.concurrent.Promise.complete(Promise.scala:57)
+
+	at scala.concurrent.Promise.complete$(Promise.scala:56)
+
+	at scala.concurrent.impl.Promise$DefaultPromise.complete(Promise.scala:104)
+
+	at scala.concurrent.Promise.failure(Promise.scala:109)
+
+	at scala.concurrent.Promise.failure$(Promise.scala:109)
+
+	at scala.concurrent.impl.Promise$DefaultPromise.failure(Promise.scala:104)
+
+	at org.apache.spark.sql.execution.adaptive.ResultQueryStageExec.$anonfun$doMat
+erialize$2(QueryStageExec.scala:336)
+
+	at java.base/java.util.concurrent.CompletableFuture.uniWhenComplete(Completabl
+eFuture.java:863)
+
+	at java.base/java.util.concurrent.CompletableFuture$UniWhenComplete.tryFire(Co
+mpletableFuture.java:841)
+
+	at java.base/java.util.concurrent.CompletableFuture.postComplete(CompletableFu
+ture.java:510)
+
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(Completabl
+eFuture.java:1773)
+
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecu
+tor.java:1136)
+
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExec
+utor.java:635)
+
+	at org.apache.spark.util.Utils$.getTryWithCallerStacktrace(Utils.scala:1453)
+
+	at org.apache.spark.util.LazyTry.get(LazyTry.scala:58)
+
+	at org.apache.spark.sql.execution.QueryExecution.commandExecuted(QueryExecutio
+n.scala:160)
+
+	at org.apache.spark.sql.execution.QueryExecution.assertCommandExecuted(QueryEx
+ecution.scala:239)
+
+	at org.apache.spark.sql.classic.DataFrameWriter.runCommand(DataFrameWriter.sca
+la:592)
+
+	at 
+org.apache.spark.sql.classic.DataFrameWriter.save(DataFrameWriter.scala:115)
+
+	at org.apache.spark.sql.DataFrameWriter.parquet(DataFrameWriter.scala:369)
+
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native 
+Method)
+
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethod
+AccessorImpl.java:77)
+
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(Delegati
+ngMethodAccessorImpl.java:43)
+
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+
+	at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)
+
+	at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)
+
+	at py4j.Gateway.invoke(Gateway.java:282)
+
+	at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)
+
+	at py4j.commands.CallCommand.execute(CallCommand.java:79)
+
+	at 
+py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)
+
+	at py4j.ClientServerConnection.run(ClientServerConnection.java:108)
+
+	at java.base/java.lang.Thread.run(Thread.java:840)
+
+	Suppressed: org.apache.spark.util.Utils$OriginalTryStackTraceException: Full 
+stacktrace of original doTryWithCallerStacktrace caller
+
+		at scala.concurrent.impl.Promise$.scala$concurrent$impl$Promise$$resolve(Prom
+ise.scala:99)
+
+		at 
+scala.concurrent.impl.Promise$DefaultPromise.tryComplete(Promise.scala:288)
+
+		at scala.concurrent.Promise.complete(Promise.scala:57)
+
+		at scala.concurrent.Promise.complete$(Promise.scala:56)
+
+		at scala.concurrent.impl.Promise$DefaultPromise.complete(Promise.scala:104)
+
+		at scala.concurrent.Promise.failure(Promise.scala:109)
+
+		at scala.concurrent.Promise.failure$(Promise.scala:109)
+
+		at scala.concurrent.impl.Promise$DefaultPromise.failure(Promise.scala:104)
+
+		at org.apache.spark.sql.execution.adaptive.ResultQueryStageExec.$anonfun$doMa
+terialize$2(QueryStageExec.scala:336)
+
+		at java.base/java.util.concurrent.CompletableFuture.uniWhenComplete(Completab
+leFuture.java:863)
+
+		at java.base/java.util.concurrent.CompletableFuture$UniWhenComplete.tryFire(C
+ompletableFuture.java:841)
+
+		at java.base/java.util.concurrent.CompletableFuture.postComplete(CompletableF
+uture.java:510)
+
+		at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(Completab
+leFuture.java:1773)
+
+		at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExec
+utor.java:1136)
+
+		at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExe
+cutor.java:635)
+
+		... 1 more
+
+Caused by: java.lang.UnsatisfiedLinkError: 'boolean 
+org.apache.hadoop.io.nativeio.NativeIO$Windows.access0(java.lang.String, int)'
+
+	at org.apache.hadoop.io.nativeio.NativeIO$Windows.access0(Native Method)
+
+	at org.apache.hadoop.io.nativeio.NativeIO$Windows.access(NativeIO.java:817)
+
+	at org.apache.hadoop.fs.FileUtil.canRead(FileUtil.java:1415)
+
+	at org.apache.hadoop.fs.FileUtil.list(FileUtil.java:1620)
+
+	at 
+org.apache.hadoop.fs.RawLocalFileSystem.listStatus(RawLocalFileSystem.java:802)
+
+	at org.apache.hadoop.fs.FileSystem.listStatus(FileSystem.java:2078)
+
+	at org.apache.hadoop.fs.FileSystem.listStatus(FileSystem.java:2122)
+
+	at org.apache.hadoop.fs.ChecksumFileSystem.listStatus(ChecksumFileSystem.java:
+1020)
+
+	at org.apache.hadoop.fs.FileSystem.listStatus(FileSystem.java:2078)
+
+	at org.apache.hadoop.fs.FileSystem.listStatus(FileSystem.java:2122)
+
+	at org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.getAllCommittedT
+askPaths(FileOutputCommitter.java:334)
+
+	at org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.commitJobInterna
+l(FileOutputCommitter.java:404)
+
+	at org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.commitJob(FileOu
+tputCommitter.java:377)
+
+	at org.apache.parquet.hadoop.ParquetOutputCommitter.commitJob(ParquetOutputCom
+mitter.java:46)
+
+	at org.apache.spark.internal.io.HadoopMapReduceCommitProtocol.commitJob(Hadoop
+MapReduceCommitProtocol.scala:184)
+
+	at org.apache.spark.sql.execution.datasources.FileFormatWriter$.$anonfun$write
+AndCommit$3(FileFormatWriter.scala:275)
+
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+
+	at org.apache.spark.util.Utils$.timeTakenMs(Utils.scala:496)
+
+	at org.apache.spark.sql.execution.datasources.FileFormatWriter$.writeAndCommit
+(FileFormatWriter.scala:275)
+
+	at org.apache.spark.sql.execution.datasources.FileFormatWriter$.executeWrite(F
+ileFormatWriter.scala:306)
+
+	at org.apache.spark.sql.execution.datasources.FileFormatWriter$.write(FileForm
+atWriter.scala:189)
+
+	at org.apache.spark.sql.execution.datasources.InsertIntoHadoopFsRelationComman
+d.run(InsertIntoHadoopFsRelationCommand.scala:195)
+
+	at org.apache.spark.sql.execution.command.DataWritingCommandExec.sideEffectRes
+ult$lzycompute(commands.scala:117)
+
+	at org.apache.spark.sql.execution.command.DataWritingCommandExec.sideEffectRes
+ult(commands.scala:115)
+
+	at org.apache.spark.sql.execution.command.DataWritingCommandExec.executeCollec
+t(commands.scala:129)
+
+	at org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanExec.$anonfun$exec
+uteCollect$1(AdaptiveSparkPlanExec.scala:396)
+
+	at org.apache.spark.sql.execution.adaptive.ResultQueryStageExec.$anonfun$doMat
+erialize$1(QueryStageExec.scala:328)
+
+	at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withThreadLocalCaptur
+ed$4(SQLExecution.scala:335)
+
+	at org.apache.spark.sql.execution.SQLExecution$.withSessionTagsApplied(SQLExec
+ution.scala:285)
+
+	at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withThreadLocalCaptur
+ed$3(SQLExecution.scala:333)
+
+	at org.apache.spark.JobArtifactSet$.withActiveJobArtifactState(JobArtifactSet.
+scala:94)
+
+	at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withThreadLocalCaptur
+ed$2(SQLExecution.scala:329)
+
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(Completabl
+eFuture.java:1768)
+
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecu
+tor.java:1136)
+
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExec
+utor.java:635)
+
+	... 1 more
+
+
+26/05/23 18:42:03 WARN SparkEnv: Exception while deleting Spark temp dir: C:\Us
+ers\zineb\AppData\Local\Temp\spark-1c6f0dbd-ebbc-4a4e-97f7-8ce10ed9138b\userFil
+es-f662e434-b457-4b50-b4e0-a76e22215778
+java.io.IOException: Failed to delete: C:\Users\zineb\AppData\Local\Temp\spark-
+1c6f0dbd-ebbc-4a4e-97f7-8ce10ed9138b\userFiles-f662e434-b457-4b50-b4e0-a76e2221
+5778\org.apache.hadoop_hadoop-aws-3.3.4.jar
+	at org.apache.spark.network.util.JavaUtils.deleteRecursivelyUsingJavaIO(JavaUt
+ils.java:308)
+	at 
+org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:277)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursivelyUsingJavaIO(JavaUt
+ils.java:291)
+	at 
+org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:277)
+	at 
+org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:248)
+	at org.apache.spark.util.SparkFileUtils.deleteRecursively(SparkFileUtils.scala
+:158)
+	at org.apache.spark.util.SparkFileUtils.deleteRecursively$(SparkFileUtils.scal
+a:157)
+	at org.apache.spark.util.Utils$.deleteRecursively(Utils.scala:1062)
+	at org.apache.spark.SparkEnv.stop(SparkEnv.scala:131)
+	at org.apache.spark.SparkContext.$anonfun$stop$25(SparkContext.scala:2406)
+	at org.apache.spark.util.Utils$.tryLogNonFatalError(Utils.scala:1314)
+	at org.apache.spark.SparkContext.stop(SparkContext.scala:2406)
+	at org.apache.spark.SparkContext.stop(SparkContext.scala:2308)
+	at org.apache.spark.api.java.JavaSparkContext.stop(JavaSparkContext.scala:552)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native 
+Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethod
+AccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(Delegati
+ngMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)
+	at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)
+	at py4j.Gateway.invoke(Gateway.java:282)
+	at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)
+	at py4j.commands.CallCommand.execute(CallCommand.java:79)
+	at 
+py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)
+	at py4j.ClientServerConnection.run(ClientServerConnection.java:108)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Attempting direct S3A read from MinIO: s3a://ecommerce-data/events.csv
+Direct S3A read failed, falling back to local MinIO download: For input string: "60s"
+Downloaded events.csv to C:\Users\zineb\AppData\Local\Temp\preprocessing_f8uiyut5\csv\events.csv
+Downloaded item_properties.csv to C:\Users\zineb\AppData\Local\Temp\preprocessing_f8uiyut5\csv\item_properties.csv
+Reading events from local file: C:\Users\zineb\AppData\Local\Temp\preprocessing_f8uiyut5\csv\events.csv
+Reading item properties from local file: C:\Users\zineb\AppData\Local\Temp\preprocessing_f8uiyut5\csv\item_properties.csv
+Events schema:
+root
+ |-- user_id: integer (nullable = true)
+ |-- item_id: integer (nullable = true)
+ |-- event_type: string (nullable = true)
+ |-- timestamp: timestamp (nullable = true)
+
++-------+-------+----------+-------------------+
+|user_id|item_id|event_type|timestamp          |
++-------+-------+----------+-------------------+
+|2      |16     |purchase  |2025-05-11 23:41:19|
+|2      |12     |purchase  |2025-05-11 23:51:21|
+|2      |18     |purchase  |2025-05-11 23:51:54|
+|2      |54     |purchase  |2025-05-11 23:52:05|
+|2      |52     |purchase  |2025-05-11 23:53:28|
++-------+-------+----------+-------------------+
+only showing top 5 rows
+Items schema:
+root
+ |-- item_id: integer (nullable = true)
+ |-- name: string (nullable = true)
+ |-- category: string (nullable = true)
+ |-- subcategory: string (nullable = true)
+ |-- brand: string (nullable = true)
+ |-- price: double (nullable = true)
+ |-- image_url: string (nullable = true)
+
++-------+---------------------------------------------------------+--------+-----------+-----------------+-----+---------+
+|item_id|name                                                     |category|subcategory|brand            |price|image_url|
++-------+---------------------------------------------------------+--------+-----------+-----------------+-----+---------+
+|3      |Maybelline Fit Me Matte + Poreless Foundation            |Makeup  |foundation |Maybelline       |7.99 |NULL     |
+|4      |NARS Natural Radiant Longwear Foundation                 |Makeup  |foundation |NARS             |49.0 |NULL     |
+|5      |MAC Matte Lipstick - Ruby Woo                            |Makeup  |Lipstick   |MAC              |19.0 |NULL     |
+|6      |Charlotte Tilbury Matte Revolution Lipstick - Pillow Talk|Makeup  |Lipstick   |Charlotte Tilbury|34.0 |NULL     |
+|7      |Dior Rouge Dior Lipstick                                 |Makeup  |Lipstick   |Dior             |42.0 |NULL     |
++-------+---------------------------------------------------------+--------+-----------+-----------------+-----+---------+
+only showing top 5 rows
+Cleaned events: rows=737, distinct_users=16, distinct_items=54
+After join filter: 737 rows
+Writing interactions to local Parquet directory: C:\Users\zineb\AppData\Local\Temp\preprocessing_f8uiyut5\interactions.parquet
+Error during preprocessing: An error occurred while calling o176.parquet.
+: java.util.concurrent.ExecutionException: Boxed Exception
+
+	at scala.concurrent.impl.Promise$.scala$concurrent$impl$Promise$$resolve(Promise.scala:99)
+
+	at scala.concurrent.impl.Promise$DefaultPromise.tryComplete(Promise.scala:288)
+
+	at scala.concurrent.Promise.complete(Promise.scala:57)
+
+	at scala.concurrent.Promise.complete$(Promise.scala:56)
+
+	at scala.concurrent.impl.Promise$DefaultPromise.complete(Promise.scala:104)
+
+	at scala.concurrent.Promise.failure(Promise.scala:109)
+
+	at scala.concurrent.Promise.failure$(Promise.scala:109)
+
+	at scala.concurrent.impl.Promise$DefaultPromise.failure(Promise.scala:104)
+
+	at org.apache.spark.sql.execution.adaptive.ResultQueryStageExec.$anonfun$doMaterialize$2(QueryStageExec.scala:336)
+
+	at java.base/java.util.concurrent.CompletableFuture.uniWhenComplete(CompletableFuture.java:863)
+
+	at java.base/java.util.concurrent.CompletableFuture$UniWhenComplete.tryFire(CompletableFuture.java:841)
+
+	at java.base/java.util.concurrent.CompletableFuture.postComplete(CompletableFuture.java:510)
+
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1773)
+
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+
+	at org.apache.spark.util.Utils$.getTryWithCallerStacktrace(Utils.scala:1453)
+
+	at org.apache.spark.util.LazyTry.get(LazyTry.scala:58)
+
+	at org.apache.spark.sql.execution.QueryExecution.commandExecuted(QueryExecution.scala:160)
+
+	at org.apache.spark.sql.execution.QueryExecution.assertCommandExecuted(QueryExecution.scala:239)
+
+	at org.apache.spark.sql.classic.DataFrameWriter.runCommand(DataFrameWriter.scala:592)
+
+	at org.apache.spark.sql.classic.DataFrameWriter.save(DataFrameWriter.scala:115)
+
+	at org.apache.spark.sql.DataFrameWriter.parquet(DataFrameWriter.scala:369)
+
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+
+	at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)
+
+	at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:374)
+
+	at py4j.Gateway.invoke(Gateway.java:282)
+
+	at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)
+
+	at py4j.commands.CallCommand.execute(CallCommand.java:79)
+
+	at py4j.ClientServerConnection.waitForCommands(ClientServerConnection.java:184)
+
+	at py4j.ClientServerConnection.run(ClientServerConnection.java:108)
+
+	at java.base/java.lang.Thread.run(Thread.java:840)
+
+	Suppressed: org.apache.spark.util.Utils$OriginalTryStackTraceException: Full stacktrace of original doTryWithCallerStacktrace caller
+
+		at scala.concurrent.impl.Promise$.scala$concurrent$impl$Promise$$resolve(Promise.scala:99)
+
+		at scala.concurrent.impl.Promise$DefaultPromise.tryComplete(Promise.scala:288)
+
+		at scala.concurrent.Promise.complete(Promise.scala:57)
+
+		at scala.concurrent.Promise.complete$(Promise.scala:56)
+
+		at scala.concurrent.impl.Promise$DefaultPromise.complete(Promise.scala:104)
+
+		at scala.concurrent.Promise.failure(Promise.scala:109)
+
+		at scala.concurrent.Promise.failure$(Promise.scala:109)
+
+		at scala.concurrent.impl.Promise$DefaultPromise.failure(Promise.scala:104)
+
+		at org.apache.spark.sql.execution.adaptive.ResultQueryStageExec.$anonfun$doMaterialize$2(QueryStageExec.scala:336)
+
+		at java.base/java.util.concurrent.CompletableFuture.uniWhenComplete(CompletableFuture.java:863)
+
+		at java.base/java.util.concurrent.CompletableFuture$UniWhenComplete.tryFire(CompletableFuture.java:841)
+
+		at java.base/java.util.concurrent.CompletableFuture.postComplete(CompletableFuture.java:510)
+
+		at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1773)
+
+		at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+
+		at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+
+		... 1 more
+
+Caused by: java.lang.UnsatisfiedLinkError: 'boolean org.apache.hadoop.io.nativeio.NativeIO$Windows.access0(java.lang.String, int)'
+
+	at org.apache.hadoop.io.nativeio.NativeIO$Windows.access0(Native Method)
+
+	at org.apache.hadoop.io.nativeio.NativeIO$Windows.access(NativeIO.java:817)
+
+	at org.apache.hadoop.fs.FileUtil.canRead(FileUtil.java:1415)
+
+	at org.apache.hadoop.fs.FileUtil.list(FileUtil.java:1620)
+
+	at org.apache.hadoop.fs.RawLocalFileSystem.listStatus(RawLocalFileSystem.java:802)
+
+	at org.apache.hadoop.fs.FileSystem.listStatus(FileSystem.java:2078)
+
+	at org.apache.hadoop.fs.FileSystem.listStatus(FileSystem.java:2122)
+
+	at org.apache.hadoop.fs.ChecksumFileSystem.listStatus(ChecksumFileSystem.java:1020)
+
+	at org.apache.hadoop.fs.FileSystem.listStatus(FileSystem.java:2078)
+
+	at org.apache.hadoop.fs.FileSystem.listStatus(FileSystem.java:2122)
+
+	at org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.getAllCommittedTaskPaths(FileOutputCommitter.java:334)
+
+	at org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.commitJobInternal(FileOutputCommitter.java:404)
+
+	at org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.commitJob(FileOutputCommitter.java:377)
+
+	at org.apache.parquet.hadoop.ParquetOutputCommitter.commitJob(ParquetOutputCommitter.java:46)
+
+	at org.apache.spark.internal.io.HadoopMapReduceCommitProtocol.commitJob(HadoopMapReduceCommitProtocol.scala:184)
+
+	at org.apache.spark.sql.execution.datasources.FileFormatWriter$.$anonfun$writeAndCommit$3(FileFormatWriter.scala:275)
+
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+
+	at org.apache.spark.util.Utils$.timeTakenMs(Utils.scala:496)
+
+	at org.apache.spark.sql.execution.datasources.FileFormatWriter$.writeAndCommit(FileFormatWriter.scala:275)
+
+	at org.apache.spark.sql.execution.datasources.FileFormatWriter$.executeWrite(FileFormatWriter.scala:306)
+
+	at org.apache.spark.sql.execution.datasources.FileFormatWriter$.write(FileFormatWriter.scala:189)
+
+	at org.apache.spark.sql.execution.datasources.InsertIntoHadoopFsRelationCommand.run(InsertIntoHadoopFsRelationCommand.scala:195)
+
+	at org.apache.spark.sql.execution.command.DataWritingCommandExec.sideEffectResult$lzycompute(commands.scala:117)
+
+	at org.apache.spark.sql.execution.command.DataWritingCommandExec.sideEffectResult(commands.scala:115)
+
+	at org.apache.spark.sql.execution.command.DataWritingCommandExec.executeCollect(commands.scala:129)
+
+	at org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanExec.$anonfun$executeCollect$1(AdaptiveSparkPlanExec.scala:396)
+
+	at org.apache.spark.sql.execution.adaptive.ResultQueryStageExec.$anonfun$doMaterialize$1(QueryStageExec.scala:328)
+
+	at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withThreadLocalCaptured$4(SQLExecution.scala:335)
+
+	at org.apache.spark.sql.execution.SQLExecution$.withSessionTagsApplied(SQLExecution.scala:285)
+
+	at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withThreadLocalCaptured$3(SQLExecution.scala:333)
+
+	at org.apache.spark.JobArtifactSet$.withActiveJobArtifactState(JobArtifactSet.scala:94)
+
+	at org.apache.spark.sql.execution.SQLExecution$.$anonfun$withThreadLocalCaptured$2(SQLExecution.scala:329)
+
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1768)
+
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+
+	... 1 more
+
+
+26/05/23 18:42:04 ERROR ShutdownHookManager: Exception while deleting Spark 
+temp dir: C:\Users\zineb\AppData\Local\Temp\spark-1c6f0dbd-ebbc-4a4e-97f7-8ce10
+ed9138b\userFiles-f662e434-b457-4b50-b4e0-a76e22215778
+java.io.IOException: Failed to delete: C:\Users\zineb\AppData\Local\Temp\spark-
+1c6f0dbd-ebbc-4a4e-97f7-8ce10ed9138b\userFiles-f662e434-b457-4b50-b4e0-a76e2221
+5778\org.apache.hadoop_hadoop-aws-3.3.4.jar
+	at org.apache.spark.network.util.JavaUtils.deleteRecursivelyUsingJavaIO(JavaUt
+ils.java:308)
+	at 
+org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:277)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursivelyUsingJavaIO(JavaUt
+ils.java:291)
+	at 
+org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:277)
+	at 
+org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:248)
+	at org.apache.spark.util.SparkFileUtils.deleteRecursively(SparkFileUtils.scala
+:158)
+	at org.apache.spark.util.SparkFileUtils.deleteRecursively$(SparkFileUtils.scal
+a:157)
+	at org.apache.spark.util.Utils$.deleteRecursively(Utils.scala:1062)
+	at org.apache.spark.util.ShutdownHookManager$.$anonfun$new$4(ShutdownHookManag
+er.scala:70)
+	at org.apache.spark.util.ShutdownHookManager$.$anonfun$new$4$adapted(ShutdownH
+ookManager.scala:67)
+	at scala.collection.ArrayOps$.foreach$extension(ArrayOps.scala:1324)
+	at org.apache.spark.util.ShutdownHookManager$.$anonfun$new$2(ShutdownHookManag
+er.scala:67)
+	at org.apache.spark.util.SparkShutdownHook.run(ShutdownHookManager.scala:231)
+	at org.apache.spark.util.SparkShutdownHookManager.$anonfun$runAll$2(ShutdownHo
+okManager.scala:205)
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+	at org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1941)
+	at org.apache.spark.util.SparkShutdownHookManager.$anonfun$runAll$1(ShutdownHo
+okManager.scala:205)
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+	at scala.util.Try$.apply(Try.scala:217)
+	at org.apache.spark.util.SparkShutdownHookManager.runAll(ShutdownHookManager.s
+cala:205)
+	at org.apache.spark.util.SparkShutdownHookManager$$anon$2.run(ShutdownHookMana
+ger.scala:184)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.jav
+a:539)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecu
+tor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExec
+utor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+26/05/23 18:42:04 ERROR ShutdownHookManager: Exception while deleting Spark 
+temp dir: 
+C:\Users\zineb\AppData\Local\Temp\spark-1c6f0dbd-ebbc-4a4e-97f7-8ce10ed9138b
+java.io.IOException: Failed to delete: C:\Users\zineb\AppData\Local\Temp\spark-
+1c6f0dbd-ebbc-4a4e-97f7-8ce10ed9138b\userFiles-f662e434-b457-4b50-b4e0-a76e2221
+5778\org.apache.hadoop_hadoop-aws-3.3.4.jar
+	at org.apache.spark.network.util.JavaUtils.deleteRecursivelyUsingJavaIO(JavaUt
+ils.java:308)
+	at 
+org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:277)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursivelyUsingJavaIO(JavaUt
+ils.java:291)
+	at 
+org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:277)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursivelyUsingJavaIO(JavaUt
+ils.java:291)
+	at 
+org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:277)
+	at 
+org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:248)
+	at org.apache.spark.util.SparkFileUtils.deleteRecursively(SparkFileUtils.scala
+:158)
+	at org.apache.spark.util.SparkFileUtils.deleteRecursively$(SparkFileUtils.scal
+a:157)
+	at org.apache.spark.util.Utils$.deleteRecursively(Utils.scala:1062)
+	at org.apache.spark.util.ShutdownHookManager$.$anonfun$new$4(ShutdownHookManag
+er.scala:70)
+	at org.apache.spark.util.ShutdownHookManager$.$anonfun$new$4$adapted(ShutdownH
+ookManager.scala:67)
+	at scala.collection.ArrayOps$.foreach$extension(ArrayOps.scala:1324)
+	at org.apache.spark.util.ShutdownHookManager$.$anonfun$new$2(ShutdownHookManag
+er.scala:67)
+	at org.apache.spark.util.SparkShutdownHook.run(ShutdownHookManager.scala:231)
+	at org.apache.spark.util.SparkShutdownHookManager.$anonfun$runAll$2(ShutdownHo
+okManager.scala:205)
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+	at org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1941)
+	at org.apache.spark.util.SparkShutdownHookManager.$anonfun$runAll$1(ShutdownHo
+okManager.scala:205)
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+	at scala.util.Try$.apply(Try.scala:217)
+	at org.apache.spark.util.SparkShutdownHookManager.runAll(ShutdownHookManager.s
+cala:205)
+	at org.apache.spark.util.SparkShutdownHookManager$$anon$2.run(ShutdownHookMana
+ger.scala:184)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.jav
+a:539)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecu
+tor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExec
+utor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+Erreur : le processus "63468" est introuvable.
